@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+.venv/
+env/
+venv/
+
+# Temporary / Copies
+insightops_ai_project/
+*.zip
+
+# Build outputs
+dist/
+build/
+
+# Python Bytecode & Caches
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# Databases & Runtime State
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment & Secrets
+.env
+.env.local
+.DS_Store
+Thumbs.db
