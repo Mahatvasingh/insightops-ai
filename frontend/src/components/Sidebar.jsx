@@ -14,7 +14,7 @@ export default function Sidebar({ activeTab, setActiveTab, pendingCount }) {
     <aside className="w-64 border-r border-slate-800/80 bg-slate-950/40 p-4 flex flex-col justify-between hidden md:flex min-h-[calc(100vh-4rem)]">
       <div className="space-y-1">
         <div className="px-3 py-2 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-          Intelligence SaaS Pipeline
+          Navigation
         </div>
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -50,14 +50,13 @@ export default function Sidebar({ activeTab, setActiveTab, pendingCount }) {
         })}
       </div>
 
-      {/* Footer system spec indicator */}
       <div className="glass-panel p-3 rounded-xl text-[11px] text-slate-400 space-y-1">
         <div className="flex items-center justify-between text-slate-300 font-semibold">
-          <span className="flex items-center gap-1.5"><Layers className="w-3.5 h-3.5 text-indigo-400" /> LangGraph Workflow</span>
+          <span className="flex items-center gap-1.5"><Layers className="w-3.5 h-3.5 text-indigo-400" /> Pipeline Engine</span>
           <span className="text-[10px] text-emerald-400 font-mono">v1.2.6</span>
         </div>
         <p className="text-[10px] text-slate-400 leading-relaxed">
-          Stateful Multi-Agent Cyclical StateGraph with PostgresSaver/MemorySaver checkpointer & Redis TTL.
+          Multi-agent orchestration with checkpointer state management.
         </p>
       </div>
     </aside>

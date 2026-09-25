@@ -1,11 +1,7 @@
 from typing import TypedDict, List, Dict, Any, Optional
 
 class AgentState(TypedDict):
-    """
-    LangGraph AgentState schema for InsightOps AI multi-agent market intelligence workflow.
-    Stores shared execution state passed cyclically between Supervisor, Researcher,
-    Quantitative Analyst, Adversarial Fact-Checker, and Executive Writer nodes.
-    """
+    """AgentState schema for LangGraph workflow execution."""
     thread_id: str
     competitor_id: str
     competitor_name: str

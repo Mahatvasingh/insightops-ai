@@ -5,12 +5,7 @@ from typing import Dict, Any, Optional
 from app.core.cache import cache_manager
 
 class WebScraperEngine:
-    """
-    Separated Ingestion Layer: Production Web Data Source Collector.
-    Collects raw company updates from live landing pages, pricing grids, and release notes.
-    Strips noise, checks Redis TTL cache, and falls back to deterministic realistic simulation
-    for offline or local demo URLs.
-    """
+    """Web scraper engine for target URL extraction and DOM cleaning."""
 
     HEADERS = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",

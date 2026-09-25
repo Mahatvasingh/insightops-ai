@@ -43,11 +43,11 @@ export default function ExecutiveDashboard({ onSelectTab }) {
       <div className="glass-panel p-6 rounded-2xl bg-gradient-to-r from-indigo-950/40 via-purple-950/20 to-slate-900 border border-indigo-500/20 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <h2 className="text-xl font-extrabold text-white">Autonomous Executive Market Intelligence</h2>
-            <span className="badge badge-medium">Real-Time Synthesis</span>
+            <h2 className="text-xl font-extrabold text-white">Market Intelligence Overview</h2>
+            <span className="badge badge-medium">Live Analytics</span>
           </div>
           <p className="text-xs text-slate-400 max-w-2xl leading-relaxed">
-            Continuous autonomous web scraping, stateful LangGraph multi-agent anomaly extraction, adversarial fact-checking, and executive brief publishing.
+            Automated market data collection, anomaly detection, fact verification, and report synthesis.
           </p>
         </div>
         <button onClick={() => onSelectTab('warroom')} className="btn-primary shrink-0">
@@ -60,7 +60,7 @@ export default function ExecutiveDashboard({ onSelectTab }) {
         <StatCard title="Tracked Targets" value={metrics.tracked_competitors || 4} subtitle="Active Surveillance" icon={Target} color="indigo" />
         <StatCard title="Strategic Anomalies" value={metrics.active_anomalies || 2} subtitle="Price Cuts & Feature Shifts" icon={AlertTriangle} color="amber" />
         <StatCard title="Intelligence Briefs" value={metrics.intelligence_briefs || 1} subtitle="Published Reports" icon={FileText} color="emerald" />
-        <StatCard title="Redis TTL Cost Savings" value={metrics.cost_savings_redis_ttl || "45.2%"} subtitle="LLM Token Budget Saved" icon={Zap} color="pink" />
+        <StatCard title="Cache Efficiency" value={metrics.cost_savings_redis_ttl || "45.2%"} subtitle="TTL Cached Requests" icon={Zap} color="pink" />
       </div>
 
       {/* Main Grid: Volatility Chart & Live Alerts */}

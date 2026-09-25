@@ -5,7 +5,7 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     PROJECT_NAME: str = "InsightOps AI"
     API_V1_STR: str = "/api/v1"
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "insightops-secret-key-production-grade-jwt-2026-super-secure")
+    SECRET_KEY: str = os.getenv("SECRET_KEY", "c8a9f3e4b1d720516b7e820c4519fa9012e3456789abcdef0123456789abcdef")
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day
 

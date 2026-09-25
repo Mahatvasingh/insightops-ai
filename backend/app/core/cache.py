@@ -4,11 +4,7 @@ import hashlib
 from typing import Any, Optional, Dict
 
 class TTLCache:
-    """
-    High-performance production-style In-Memory / Redis TTL Cache.
-    Caches web scraping payloads, parsed HTML contents, and intermediate LLM outputs
-    to reduce external HTTP blocking and lower token costs by ~45%.
-    """
+    """In-memory key-value cache with automatic TTL expiration."""
     def __init__(self):
         self._store: Dict[str, Dict[str, Any]] = {}
 
