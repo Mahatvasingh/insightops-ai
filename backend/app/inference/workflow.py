@@ -17,6 +17,17 @@ from app.inference.agents.writer import writer_node
 conn = sqlite3.connect(settings.SQLITE_CHECKPOINT_DB, check_same_thread=False)
 checkpointer = SqliteSaver(conn)
 
+def route_researcher(state: AgentState) -> str:
+    """
+    Routing from Researcher node:
+    - If status is 'unchanged' or 'failed', short-circuit execution directly to END.
+    - Otherwise proceed to Quantitative Analyst.
+    """
+    status = state.get("status", "")
+    if status in ("unchanged", "failed"):
+        return END
+    return "analyst"
+
 def route_fact_checker(state: AgentState) -> str:
     """
     Conditional Edge Routing Order:
@@ -120,7 +131,17 @@ def create_market_intelligence_graph():
     # Define Execution Edges
     workflow.set_entry_point("supervisor")
     workflow.add_edge("supervisor", "researcher")
-    workflow.add_edge("researcher", "analyst")
+
+    # Conditional Edges from Researcher (Short-circuit on unchanged / failed)
+    workflow.add_conditional_edges(
+        "researcher",
+        route_researcher,
+        {
+            "analyst": "analyst",
+            END: END
+        }
+    )
+
     workflow.add_edge("analyst", "fact_checker")
 
     # Conditional Edges from Fact-Checker

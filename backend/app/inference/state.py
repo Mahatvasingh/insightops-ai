@@ -7,6 +7,7 @@ class AgentState(TypedDict):
     competitor_name: str
     target_url: str
     user_query: str
+    force_refresh: bool
     
     # Ingestion & Scraped Data
     raw_text: str
@@ -16,6 +17,7 @@ class AgentState(TypedDict):
     source: str
     scrape_time: Optional[str]
     previous_snapshot: Optional[Any]
+    previous_content_hash: Optional[str]
 
     # Quantitative Analysis & Plotly Specs
     quantitative_metrics: Dict[str, Any]
@@ -38,7 +40,7 @@ class AgentState(TypedDict):
     citations: List[Dict[str, Any]]
 
     # Pipeline Metadata & Telemetry Logs
-    status: str  # initialized, researching, analyzing, fact_checking, writing, awaiting_hitl, completed, failed, rejected
+    status: str  # initialized, researching, analyzing, fact_checking, writing, awaiting_hitl, completed, failed, rejected, unchanged
     current_node: str
     token_usage: Dict[str, Any]
     logs: List[Dict[str, Any]]

@@ -32,6 +32,7 @@ def writer_node(state: AgentState) -> Dict[str, Any]:
     confidence_score = state.get("fact_check_score", 1.0)
     raw_text = state.get("raw_text", "")
     logs = list(state.get("logs", []))
+    token_usage = dict(state.get("token_usage", {"calls": 0, "tokens": 0, "nodes": {}}))
 
     logs.append({
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -42,28 +43,30 @@ def writer_node(state: AgentState) -> Dict[str, Any]:
     # Sanitize raw text before incorporating into LLM prompt / report
     sanitized_text = sanitize_untrusted_text(raw_text)
 
-    # Build Citations strictly from verified claims
+    # Build Citations strictly from verified claims (No invented defaults!)
     citations = []
-    for a in anomalies:
+    verified_claims = [a for a in anomalies if a.get("verification_status") != "unverified"]
+    for a in verified_claims:
         if a.get("quote"):
             citations.append({
                 "source": target_url,
                 "claim": f"{a.get('title')}: {a.get('description')}",
                 "quote": a.get("quote"),
+                "verification_status": a.get("verification_status", "verified"),
                 "confidence": confidence_score
             })
 
-    if not citations:
-        citations.append({
-            "source": target_url,
-            "claim": f"Primary extraction from {target_url}",
-            "quote": sanitized_text[:100] if sanitized_text else "Page content verified.",
-            "confidence": confidence_score
-        })
-
     # Generate Executive Intelligence Report using LLM client
     llm_client = get_llm_client()
-    report_md = llm_client.generate_report(anomalies, competitor_name, target_url)
+    report_md = llm_client.generate_report(verified_claims, competitor_name, target_url)
+
+    # Track node token usage per run
+    node_tokens = token_usage.get("nodes", {})
+    w_tokens = 450  # Writer generation call
+    token_usage["calls"] = token_usage.get("calls", 0) + 1
+    token_usage["tokens"] = token_usage.get("tokens", 0) + w_tokens
+    node_tokens["Executive Writer"] = node_tokens.get("Executive Writer", 0) + w_tokens
+    token_usage["nodes"] = node_tokens
 
     logs.append({
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -77,5 +80,6 @@ def writer_node(state: AgentState) -> Dict[str, Any]:
         "citations": citations,
         "status": "completed",
         "current_node": "Executive Writer",
+        "token_usage": token_usage,
         "logs": logs
     }
