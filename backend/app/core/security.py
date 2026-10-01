@@ -51,31 +51,37 @@ def decode_token(token: str) -> TokenPayload:
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-# Role-Based Access Control (RBAC) Dependency Helpers with live DB verification
+async def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    db: AsyncSession = Depends(get_db)
+):
+    """Unified user authentication and DB status verification dependency."""
+    payload = decode_token(token)
+    if not payload.sub:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload: missing subject")
+
+    from app.db.models import User
+    result = await db.execute(select(User).where(User.email == payload.sub))
+    user = result.scalars().first()
+
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User account no longer exists")
+    if not user.is_active:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is deactivated")
+
+    return user
+
 class RoleChecker:
     def __init__(self, allowed_roles: List[str]):
         self.allowed_roles = allowed_roles
 
-    async def __call__(self, token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)):
-        payload = decode_token(token)
-        if not payload.sub:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token subject")
-
-        # Live DB Verification: Ensure user exists, is active, and possesses authorized role
-        from app.db.models import User
-        result = await db.execute(select(User).where(User.email == payload.sub))
-        user = result.scalars().first()
-
-        if not user:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User account no longer exists")
-        if not user.is_active:
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is deactivated")
-        if user.role not in self.allowed_roles:
+    async def __call__(self, current_user = Depends(get_current_user)):
+        if current_user.role not in self.allowed_roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Role '{user.role}' does not have sufficient permissions. Required: {self.allowed_roles}"
+                detail=f"Role '{current_user.role}' does not have sufficient permissions. Required: {self.allowed_roles}"
             )
-        return user
+        return current_user
 
 require_admin = RoleChecker(["Admin"])
 require_analyst = RoleChecker(["Admin", "Analyst"])

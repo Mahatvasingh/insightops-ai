@@ -1,38 +1,43 @@
+import logging
 from app.config import settings
 from app.db.database import sync_engine, SyncSessionLocal, Base
 from app.db.models import User, Competitor, ScrapingTarget, Alert, Report
 from app.core.security import get_password_hash
 
+logger = logging.getLogger(__name__)
+
 def init_db():
     Base.metadata.create_all(bind=sync_engine)
     if not settings.DEMO_MODE:
+        logger.info("DEMO_MODE is False: Skipping demo data seeding.")
         return
 
+    logger.warning("DEMO_MODE is True: Seeding demo credentials and fixture data into database.")
     session = SyncSessionLocal()
     try:
-        # Seed users if none exist
+        # Seed demo users if none exist
         if not session.query(User).filter_by(email="admin@insightops.ai").first():
             admin_user = User(
                 email="admin@insightops.ai",
                 hashed_password=get_password_hash("admin123"),
-                full_name="Chief Intelligence Officer (Admin)",
+                full_name="Chief Intelligence Officer (Demo Admin)",
                 role="Admin"
             )
             analyst_user = User(
                 email="analyst@insightops.ai",
                 hashed_password=get_password_hash("analyst123"),
-                full_name="Lead Market Analyst",
+                full_name="Lead Market Analyst (Demo Analyst)",
                 role="Analyst"
             )
             viewer_user = User(
                 email="viewer@insightops.ai",
                 hashed_password=get_password_hash("viewer123"),
-                full_name="Executive Viewer",
+                full_name="Executive Viewer (Demo Viewer)",
                 role="Viewer"
             )
             session.add_all([admin_user, analyst_user, viewer_user])
 
-        # Seed competitors & sample intelligence if DB is empty
+        # Seed competitors & demo intelligence if DB is empty
         if session.query(Competitor).count() == 0:
             c1 = Competitor(
                 name="SaaSify Cloud",
@@ -89,58 +94,50 @@ def init_db():
             t4 = ScrapingTarget(competitor_id=c3.id, url=c3.pricing_url, target_type="pricing", status_code=200)
             session.add_all([t1, t2, t3, t4])
 
-            # Add seed alerts
+            # Add seed alerts marked explicitly as Demo Data
             a1 = Alert(
                 competitor_id=c1.id,
-                title="SaaSify Cloud slashed Enterprise Tier pricing by 20%",
+                title="[Demo Data] SaaSify Cloud slashed Enterprise Tier pricing by 20%",
                 severity="critical",
-                anomaly_type="Enterprise_cut_20%",
-                description="Detected unannounced price update on Enterprise plan from $499/mo to $399/mo, offering free SSO integration.",
+                anomaly_type="price_shift",
+                description="[Demo Data] Enterprise plan updated from $499/mo to $399/mo (-20.0%).",
                 metric_delta="-20.0%",
                 is_read=False
             )
             a2 = Alert(
                 competitor_id=c2.id,
-                title="DataPulse AI silently removed legacy API rate-limit guarantees",
+                title="[Demo Data] DataPulse AI removed SLA rate-limit guarantees",
                 severity="high",
                 anomaly_type="feature_removal",
-                description="Terms of Service & API docs updated to remove SLA guarantee of 10,000 req/min for Pro users.",
-                metric_delta="-100% SLA Guarantee",
+                description="[Demo Data] API docs updated to remove SLA guarantee of 10,000 req/min for Pro users.",
+                metric_delta="SLA Removed",
                 is_read=False
             )
             a3 = Alert(
                 competitor_id=c3.id,
-                title="ApexScale Enterprise negative churn reviews spike",
-                severity="medium",
-                anomaly_type="churn_spike",
-                description="Spike in user review complaints on G2 & Reddit regarding recent v3.4 migration breaking changes.",
-                metric_delta="+42% Negative Sentiment",
+                title="[Demo Data] ApexScale Enterprise negative review ratio shift",
+                severity="high",
+                anomaly_type="text_table_inconsistency",
+                description="[Demo Data] Negative review ratio shift detected (8.2% to 21.5%).",
+                metric_delta="Data Discrepancy",
                 is_read=True
             )
             session.add_all([a1, a2, a3])
 
-            # Seed report
+            # Seed report marked explicitly as Demo Data
             plotly_demo_spec = {
                 "data": [
                     {
-                        "x": ["Q1 2026", "Q2 2026", "Q3 2026", "Q4 2026 (Est)"],
-                        "y": [499, 499, 399, 349],
+                        "x": ["v1 Snapshot", "v2 Snapshot"],
+                        "y": [499, 399],
                         "type": "scatter",
                         "mode": "lines+markers",
                         "name": "SaaSify Enterprise Pricing ($/mo)",
                         "line": {"color": "#6366f1", "width": 3}
-                    },
-                    {
-                        "x": ["Q1 2026", "Q2 2026", "Q3 2026", "Q4 2026 (Est)"],
-                        "y": [599, 549, 549, 549],
-                        "type": "scatter",
-                        "mode": "lines+markers",
-                        "name": "DataPulse AI Pro Tier ($/mo)",
-                        "line": {"color": "#ec4899", "dash": "dot", "width": 3}
                     }
                 ],
                 "layout": {
-                    "title": "Quarterly Enterprise Pricing Shift Comparison",
+                    "title": "[Demo Data] Enterprise Pricing Shift Snapshot",
                     "paper_bgcolor": "rgba(0,0,0,0)",
                     "plot_bgcolor": "rgba(0,0,0,0)",
                     "font": {"color": "#e2e8f0"},
@@ -151,43 +148,33 @@ def init_db():
 
             r1 = Report(
                 competitor_id=c1.id,
-                title="Executive Market Brief: SaaSify Cloud Q3 Strategic Pricing Shift",
-                summary="SaaSify Cloud has executed an aggressive 20% price cut on its core Enterprise tier, attempting to capture mid-market accounts. Immediate response recommended.",
-                executive_brief_md="""# Executive Intelligence Brief: SaaSify Cloud
+                title="[Demo Data] Executive Market Brief: SaaSify Cloud Pricing Shift",
+                summary="[Demo Data] Automated threat analysis for SaaSify Cloud extracted from demo fixtures.",
+                executive_brief_md="""# Executive Intelligence Brief: SaaSify Cloud [Demo Data]
 
 ## Strategic Overview
-On September 24, 2026, **SaaSify Cloud** executed an unannounced **20% price reduction** on its Enterprise subscription tier (lowered from **$499/mo** to **$399/mo**). Additionally, enterprise SAML/SSO enforcement—previously a $150 add-on—is now bundled at zero extra charge.
+Automated analysis detected a 20% price reduction on SaaSify Cloud Enterprise subscription tier (lowered from $499/mo to $399/mo).
 
 ## Extracted Anomalies & Metrics
-* **Enterprise Plan Base Rate**: Decreased from **$499/mo to $399/mo** (-20.0%).
-* **Feature Bundling**: Added native SAML/SSO & Audit Logging without tier upgrading.
-* **Target Segment Shift**: Positioned to undercut mid-market competitors during Q4 budget planning cycles.
+* **Enterprise Plan Base Rate**: Decreased from $499/mo to $399/mo (-20.0%).
 
 ## Fact-Checker Validation & Citations
-* **Source 1**: `https://saasify.cloud/pricing` (Scraped 2026-09-24 14:02:11 UTC) - Confirmed `$399/month billed annually`.
-* **Fact Check Confidence Score**: **96.4%** (Verified against primary web extraction).
-
-## Strategic Threat Level: HIGH
-This aggressive pricing maneuver is designed to block renewal conversations for competing SaaS platforms. 
-
-### Recommended Counter-Actions
-1. **Sales Enablement**: Release competitive battlecard highlighting our superior 99.99% uptime SLA vs SaaSify's recent outage history.
-2. **Flexible Tiering**: Introduce annual prepay discount incentives to secure renewals prior to competitor outreach.
-3. **Value Proposition**: Emphasize native AI workflows which SaaSify still charges as an add-on module.
+* **Source**: `https://saasify.cloud/pricing`
+* **Status**: Verified against fixture snapshot.
 """,
                 plotly_spec_json=plotly_demo_spec,
                 citations_json=[
-                    {"source": "https://saasify.cloud/pricing", "claim": "Enterprise Plan $399/mo", "confidence": 0.98},
-                    {"source": "Archive Snapshot 2026-08-15", "claim": "Previous Enterprise Rate $499/mo", "confidence": 0.95}
+                    {"source": "https://saasify.cloud/pricing", "claim": "Enterprise Plan $399/mo", "confidence": 1.0}
                 ],
                 version=1
             )
             session.add(r1)
 
         session.commit()
+        logger.info("Demo data seeding completed successfully.")
     except Exception as e:
         session.rollback()
-        print(f"Error seeding database: {e}")
+        logger.error(f"Error seeding database: {e}")
     finally:
         session.close()
 

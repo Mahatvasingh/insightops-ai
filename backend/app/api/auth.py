@@ -7,8 +7,7 @@ from pydantic import BaseModel, EmailStr
 
 from app.db.database import get_db
 from app.db.models import User
-from app.core.security import verify_password, get_password_hash, create_access_token, require_admin
-from app.api.deps import get_current_user
+from app.core.security import verify_password, get_password_hash, create_access_token, require_admin, get_current_user
 from app.core.limiter import limiter
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
@@ -17,7 +16,6 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str
     full_name: str
-    role: Optional[str] = "Viewer"
 
 class AdminUserCreate(BaseModel):
     email: EmailStr
@@ -61,13 +59,12 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
 async def register(request: Request, user_in: UserCreate, db: AsyncSession = Depends(get_db)):
     """
     Public registration endpoint.
-    IGNS user-supplied role and ALWAYS assigns 'Viewer' to prevent privilege escalation.
+    ALWAYS assigns 'Viewer' role to prevent privilege escalation.
     """
     result = await db.execute(select(User).where(User.email == user_in.email))
     if result.scalars().first():
         raise HTTPException(status_code=400, detail="User with this email already exists")
 
-    # Enforce Viewer role on public signup
     public_role = "Viewer"
     new_user = User(
         email=user_in.email,
@@ -94,9 +91,7 @@ async def create_user_by_admin(
     db: AsyncSession = Depends(get_db),
     admin=Depends(require_admin)
 ):
-    """
-    Admin-only endpoint to create users with explicit roles (Admin, Analyst, Viewer).
-    """
+    """Admin-only endpoint to create users with explicit roles (Admin, Analyst, Viewer)."""
     result = await db.execute(select(User).where(User.email == user_in.email))
     if result.scalars().first():
         raise HTTPException(status_code=400, detail="User with this email already exists")
@@ -121,9 +116,7 @@ async def promote_user_role(
     db: AsyncSession = Depends(get_db),
     admin=Depends(require_admin)
 ):
-    """
-    Admin-only endpoint to promote/update a user's role.
-    """
+    """Admin-only endpoint to promote/update a user's role."""
     if role_in.role not in ["Admin", "Analyst", "Viewer"]:
         raise HTTPException(status_code=400, detail="Invalid role specified")
 

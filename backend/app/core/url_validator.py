@@ -3,12 +3,15 @@ import ipaddress
 from urllib.parse import urlparse
 from typing import Optional
 
+from app.config import settings
+
 def validate_target_url(url: str, allowed_domain: Optional[str] = None) -> str:
     """
     Validates target URL against SSRF vulnerabilities:
     - Enforces http/https schemes.
+    - If allowed_domain is specified, restricts access strictly to exact domain or subdomains.
     - Resolves IP and blocks loopback, private, link-local, multicast, or reserved ranges.
-    - If allowed_domain is specified, restricts access to that domain or its subdomains.
+    - In DEMO mode, skips live DNS resolution to support offline/testing environments.
     """
     if not url:
         raise ValueError("URL cannot be empty")
@@ -21,14 +24,22 @@ def validate_target_url(url: str, allowed_domain: Optional[str] = None) -> str:
     if not hostname:
         raise ValueError("Invalid URL format: missing hostname")
 
+    clean_host = hostname.lower().strip()
+
     # Domain restriction check if competitor domain provided
     if allowed_domain:
         clean_allowed = allowed_domain.lower().strip()
-        clean_host = hostname.lower().strip()
-        if not (clean_host == clean_allowed or clean_host.endswith("." + clean_allowed) or clean_allowed in clean_host):
+        # Strict domain check: exact match or subdomain suffix only! (No substring bypass)
+        is_exact = clean_host == clean_allowed
+        is_subdomain = clean_host.endswith("." + clean_allowed)
+        if not (is_exact or is_subdomain):
             raise ValueError(f"Target URL domain '{hostname}' does not match allowed competitor domain '{allowed_domain}'")
 
-    # IP resolution & SSRF check
+    # In DEMO scraper mode, skip live DNS resolution to support offline/fixtures execution
+    if settings.SCRAPER_MODE.lower() == "demo":
+        return url
+
+    # IP resolution & SSRF check for live mode
     try:
         addr_info = socket.getaddrinfo(hostname, None)
     except socket.gaierror as e:
@@ -50,7 +61,6 @@ def validate_target_url(url: str, allowed_domain: Optional[str] = None) -> str:
         except ValueError as err:
             if "restricted" in str(err):
                 raise err
-            # If ipaddress fails to parse, treat as invalid
             raise ValueError(f"Invalid IP address resolved for hostname '{hostname}': {ip_str}")
 
     return url

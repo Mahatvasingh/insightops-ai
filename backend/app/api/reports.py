@@ -1,6 +1,7 @@
 import io
-from typing import List, Optional
-from fastapi import APIRouter, Depends, HTTPException, Response
+import xml.sax.saxutils
+from typing import List
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -15,7 +16,7 @@ from app.core.security import require_viewer
 router = APIRouter(prefix="/reports", tags=["Reports & Intelligence Vault"])
 
 @router.get("", response_model=List[dict])
-async def list_reports(db: AsyncSession = Depends(get_db), token=Depends(require_viewer)):
+async def list_reports(db: AsyncSession = Depends(get_db), user=Depends(require_viewer)):
     result = await db.execute(
         select(Report, Competitor.name.label("competitor_name"))
         .join(Competitor, Report.competitor_id == Competitor.id)
@@ -36,7 +37,7 @@ async def list_reports(db: AsyncSession = Depends(get_db), token=Depends(require
     ]
 
 @router.get("/{id}")
-async def get_report_detail(id: str, db: AsyncSession = Depends(get_db), token=Depends(require_viewer)):
+async def get_report_detail(id: str, db: AsyncSession = Depends(get_db), user=Depends(require_viewer)):
     result = await db.execute(
         select(Report, Competitor.name.label("competitor_name"))
         .join(Competitor, Report.competitor_id == Competitor.id)
@@ -61,9 +62,10 @@ async def get_report_detail(id: str, db: AsyncSession = Depends(get_db), token=D
     }
 
 @router.get("/{id}/export")
-async def export_report_pdf(id: str, db: AsyncSession = Depends(get_db), token=Depends(require_viewer)):
+async def export_report_pdf(id: str, db: AsyncSession = Depends(get_db), user=Depends(require_viewer)):
     """
     Generates and returns an executive PDF brief for offline distribution.
+    Escapes all dynamic text using xml.sax.saxutils.escape to prevent ReportLab XML parsing errors.
     """
     result = await db.execute(select(Report).where(Report.id == id))
     rep = result.scalars().first()
@@ -79,16 +81,21 @@ async def export_report_pdf(id: str, db: AsyncSession = Depends(get_db), token=D
     heading_style = ParagraphStyle('Heading', parent=styles['Heading2'], fontSize=14, spaceAfter=8)
     body_style = ParagraphStyle('Body', parent=styles['Normal'], fontSize=10, leading=14, spaceAfter=6)
 
-    story.append(Paragraph(f"InsightOps AI - Executive Intelligence Brief", title_style))
-    story.append(Paragraph(f"Report Title: {rep.title}", heading_style))
+    safe_title = xml.sax.saxutils.escape(rep.title or "Executive Brief")
+    story.append(Paragraph("InsightOps AI - Executive Intelligence Brief", title_style))
+    story.append(Paragraph(f"Report Title: {safe_title}", heading_style))
     story.append(Spacer(1, 12))
 
-    for line in rep.executive_brief_md.split('\n'):
-        if line.startswith('#'):
-            clean_line = line.replace('#', '').strip()
-            story.append(Paragraph(clean_line, heading_style))
-        elif line.strip():
-            story.append(Paragraph(line.strip(), body_style))
+    brief_md = rep.executive_brief_md or ""
+    for line in brief_md.split('\n'):
+        safe_line = xml.sax.saxutils.escape(line.strip())
+        if not safe_line:
+            continue
+        if safe_line.startswith('#'):
+            clean_heading = safe_line.lstrip('#').strip()
+            story.append(Paragraph(clean_heading, heading_style))
+        else:
+            story.append(Paragraph(safe_line, body_style))
 
     doc.build(story)
     buffer.seek(0)
