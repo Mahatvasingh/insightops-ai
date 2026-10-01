@@ -1,0 +1,12 @@
+{
+  "url": "https://saasify.cloud/pricing",
+  "title": "SaaSify Cloud Pricing Update (Q3 2026)",
+  "raw_text": "SaaSify Cloud Pricing Update (Effective Q3 2026)\nStarter Plan: $29/month per user - Up to 5 users, basic analytics.\nPro Plan: $99/month per user - Unlimited users, workflow automation.\nEnterprise Plan: $399/month (WAS $499/month - Cut by 20%) - Dedicated VPC, SSO/SAML inclusion, custom SLA.\nRelease Notes: SAML SSO fee removed for all annual contracts.",
+  "tables": [
+    ["Tier", "Rate ($/mo)", "SSO Included"],
+    ["Starter", "$29", "No"],
+    ["Pro", "$99", "No"],
+    ["Enterprise", "$399", "Yes (Bundled)"]
+  ],
+  "status_code": 200
+}

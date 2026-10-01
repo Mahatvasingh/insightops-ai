@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: insightops-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - DEMO_MODE=true
+      - SCRAPER_MODE=demo
+      - LLM_PROVIDER=mock
+      - DATABASE_URL=sqlite+aiosqlite:///./insightops.db
+      - SYNC_DATABASE_URL=sqlite:///./insightops.db
+      - SQLITE_CHECKPOINT_DB=./checkpointer.db
+    volumes:
+      - insightops-data:/app/data
+    restart: unless-stopped
+
+volumes:
+  insightops-data:

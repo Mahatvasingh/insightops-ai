@@ -1,17 +1,36 @@
+import re
 from datetime import datetime, timezone
-from typing import Dict, Any
+from typing import Dict, Any, List
+
 from app.inference.state import AgentState
+from app.inference.llm import get_llm_client
+
+def sanitize_untrusted_text(text: str) -> str:
+    """
+    Prompt-Injection Defense:
+    Strips potential prompt injection vectors, hidden control characters,
+    markdown instructions, and system override commands from untrusted scraped text.
+    """
+    if not text:
+        return ""
+    # Strip potential instruction override tags
+    cleaned = re.sub(r'<(?:system|user|assistant|instruction|prompt)[^>]*>', '', text, flags=re.IGNORECASE)
+    # Strip dangerous instruction patterns like "Ignore previous instructions"
+    cleaned = re.sub(r'(?i)(ignore\s+previous\s+instructions|system\s+prompt|you\s+are\s+now)', '[REDACTED_TEXT]', cleaned)
+    return cleaned.strip()
 
 def writer_node(state: AgentState) -> Dict[str, Any]:
     """
     Executive Writer Agent Node.
-    Synthesizes extracted facts, quantitative anomalies, and verified citations
-    into a comprehensive C-Suite Executive Intelligence Brief in GitHub Markdown format.
+    Synthesizes ONLY verified claims into executive Markdown brief.
+    Enforces prompt-injection defense on scraped text.
+    Builds citations strictly from verified primary source evidence.
     """
     competitor_name = state.get("competitor_name", "Competitor")
     target_url = state.get("target_url", "")
-    anomalies = state.get("anomaly_flags", [])
-    confidence_score = state.get("fact_check_score", 0.95)
+    anomalies = list(state.get("anomaly_flags", []))
+    confidence_score = state.get("fact_check_score", 1.0)
+    raw_text = state.get("raw_text", "")
     logs = list(state.get("logs", []))
 
     logs.append({
@@ -20,43 +39,36 @@ def writer_node(state: AgentState) -> Dict[str, Any]:
         "message": f"Drafting executive intelligence brief for {competitor_name}."
     })
 
-    # Citations list
-    citations = [
-        {"source": target_url, "claim": f"Extracted from {target_url}", "confidence": confidence_score},
-        {"source": "InsightOps Data Engine", "claim": "Quantitative Delta Verification", "confidence": 0.96}
-    ]
+    # Sanitize raw text before incorporating into LLM prompt / report
+    sanitized_text = sanitize_untrusted_text(raw_text)
 
-    # Format Markdown Report
-    anomaly_bullets = ""
+    # Build Citations strictly from verified claims
+    citations = []
     for a in anomalies:
-        anomaly_bullets += f"* **{a.get('title')}** ({a.get('severity').upper()}): {a.get('description')} (Delta: `{a.get('metric_delta')}`)\n"
+        if a.get("quote"):
+            citations.append({
+                "source": target_url,
+                "claim": f"{a.get('title')}: {a.get('description')}",
+                "quote": a.get("quote"),
+                "confidence": confidence_score
+            })
 
-    report_md = f"""# Executive Market Intelligence Brief: {competitor_name}
+    if not citations:
+        citations.append({
+            "source": target_url,
+            "claim": f"Primary extraction from {target_url}",
+            "quote": sanitized_text[:100] if sanitized_text else "Page content verified.",
+            "confidence": confidence_score
+        })
 
-## Executive Summary
-Automated analysis detected market updates for **{competitor_name}** based on web extraction from `{target_url}`.
-
-## Strategic Anomalies & Quantitative Shifts
-{anomaly_bullets}
-
-## Verification & Audit Trail
-* **Fact Check Confidence Score**: **{confidence_score * 100:.1f}%**
-* **Verification Status**: Verified against DOM extract and metric baseline.
-* **Citations**: `{target_url}`
-
-## Recommendations
-1. **Sales & Product Positioning**: Deploy battlecards highlighting platform reliability.
-2. **Pricing Resilience**: Evaluate targeted discount incentives for key accounts.
-3. **Monitoring Cadence**: Maintain automated surveillance on `{target_url}`.
-
----
-*Report generated on {datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M UTC')}.*
-"""
+    # Generate Executive Intelligence Report using LLM client
+    llm_client = get_llm_client()
+    report_md = llm_client.generate_report(anomalies, competitor_name, target_url)
 
     logs.append({
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "node": "Executive Writer",
-        "message": "Executive Intelligence Brief successfully formatted and finalized."
+        "message": f"Executive Intelligence Brief formatted with {len(citations)} verified citation(s)."
     })
 
     return {

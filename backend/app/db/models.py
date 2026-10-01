@@ -50,6 +50,7 @@ class ScrapingTarget(Base):
     last_scraped_at = Column(DateTime, nullable=True)
     status_code = Column(Integer, default=200)
     content_hash = Column(String, nullable=True)
+    snapshot_data = Column(JSON, nullable=True)
 
     competitor = relationship("Competitor", back_populates="targets")
 
@@ -74,7 +75,7 @@ class AgentRun(Base):
     id = Column(String, primary_key=True, default=generate_uuid)
     thread_id = Column(String, unique=True, index=True, nullable=False)
     competitor_id = Column(String, ForeignKey("competitors.id"), nullable=False)
-    status = Column(String, default="running")  # running, awaiting_hitl, approved, completed, failed
+    status = Column(String, default="running")  # running, awaiting_hitl, approved, completed, failed, rejected
     confidence_score = Column(Float, default=1.0)
     raw_data_summary = Column(Text, nullable=True)
     extracted_facts = Column(JSON, nullable=True)
@@ -82,6 +83,7 @@ class AgentRun(Base):
     plotly_spec = Column(JSON, nullable=True)
     writer_draft = Column(Text, nullable=True)
     final_report = Column(Text, nullable=True)
+    hitl_approved = Column(Boolean, nullable=True)
     hitl_feedback = Column(Text, nullable=True)
     logs_json = Column(JSON, default=list)
     created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc))

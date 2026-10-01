@@ -1,3 +1,4 @@
+import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -13,12 +14,23 @@ from app.api.alerts import router as alerts_router
 from app.api.agent import router as agent_router
 from app.api.analytics import router as analytics_router
 from app.api.reports import router as reports_router
+from app.api.health import router as health_router
+from app.scheduler import start_scheduler, shutdown_scheduler
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+)
+logger = logging.getLogger("insightops")
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Initialize SQLite tables & seed data on startup
+    logger.info("Initializing database and starting APScheduler...")
     init_db()
+    start_scheduler()
     yield
+    logger.info("Shutting down APScheduler...")
+    shutdown_scheduler()
 
 app = FastAPI(
     title=settings.PROJECT_NAME,
@@ -42,6 +54,7 @@ app.add_middleware(
 )
 
 # Include API V1 Routers
+app.include_router(health_router, prefix=settings.API_V1_STR)
 app.include_router(auth_router, prefix=settings.API_V1_STR)
 app.include_router(competitors_router, prefix=settings.API_V1_STR)
 app.include_router(alerts_router, prefix=settings.API_V1_STR)

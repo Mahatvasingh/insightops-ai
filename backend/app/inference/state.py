@@ -12,6 +12,10 @@ class AgentState(TypedDict):
     raw_text: str
     parsed_tables: List[List[Dict[str, Any]]]
     extracted_facts: List[Dict[str, Any]]
+    content_hash: str
+    source: str
+    scrape_time: Optional[str]
+    previous_snapshot: Optional[Any]
 
     # Quantitative Analysis & Plotly Specs
     quantitative_metrics: Dict[str, Any]
@@ -33,7 +37,8 @@ class AgentState(TypedDict):
     final_report: str
     citations: List[Dict[str, Any]]
 
-    # Pipeline Metadata & Streaming Telemetry Logs
-    status: str  # initialized, researching, analyzing, fact_checking, writing, awaiting_hitl, completed, failed
+    # Pipeline Metadata & Telemetry Logs
+    status: str  # initialized, researching, analyzing, fact_checking, writing, awaiting_hitl, completed, failed, rejected
     current_node: str
+    token_usage: Dict[str, Any]
     logs: List[Dict[str, Any]]

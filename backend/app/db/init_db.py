@@ -1,13 +1,16 @@
-from sqlalchemy import inspect
+from app.config import settings
 from app.db.database import sync_engine, SyncSessionLocal, Base
-from app.db.models import User, Competitor, ScrapingTarget, Alert, Report, AgentRun
+from app.db.models import User, Competitor, ScrapingTarget, Alert, Report
 from app.core.security import get_password_hash
 
 def init_db():
     Base.metadata.create_all(bind=sync_engine)
+    if not settings.DEMO_MODE:
+        return
+
     session = SyncSessionLocal()
     try:
-        # Check if users exist
+        # Seed users if none exist
         if not session.query(User).filter_by(email="admin@insightops.ai").first():
             admin_user = User(
                 email="admin@insightops.ai",
@@ -29,7 +32,7 @@ def init_db():
             )
             session.add_all([admin_user, analyst_user, viewer_user])
 
-        # Check if competitors exist
+        # Seed competitors & sample intelligence if DB is empty
         if session.query(Competitor).count() == 0:
             c1 = Competitor(
                 name="SaaSify Cloud",
@@ -116,7 +119,7 @@ def init_db():
             )
             session.add_all([a1, a2, a3])
 
-            # Add seed reports with embedded Plotly JSON specs
+            # Seed report
             plotly_demo_spec = {
                 "data": [
                     {
@@ -162,8 +165,7 @@ On September 24, 2026, **SaaSify Cloud** executed an unannounced **20% price red
 
 ## Fact-Checker Validation & Citations
 * **Source 1**: `https://saasify.cloud/pricing` (Scraped 2026-09-24 14:02:11 UTC) - Confirmed `$399/month billed annually`.
-* **Source 2**: Archive snapshot comparison verified prior rate was `$499/month`.
-* **Fact Check Confidence Score**: **96.4%** (Verified against live HTML AST diff).
+* **Fact Check Confidence Score**: **96.4%** (Verified against primary web extraction).
 
 ## Strategic Threat Level: HIGH
 This aggressive pricing maneuver is designed to block renewal conversations for competing SaaS platforms. 

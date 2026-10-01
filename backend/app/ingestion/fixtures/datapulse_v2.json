@@ -1,0 +1,12 @@
+{
+  "url": "https://datapulse.ai/plans",
+  "title": "DataPulse AI Plans & SLAs (Updated)",
+  "raw_text": "DataPulse AI Pricing & Terms of Service Changes\nDeveloper Plan: $0/mo - 1,000 API credits.\nGrowth Plan: $149/mo - 50,000 API credits.\nNOTICE: Effective Sept 2026, legacy SLA guarantees of 10,000 req/min for Growth Plan are removed.\nEnterprise Tier: Custom pricing ($799/mo base).",
+  "tables": [
+    ["Plan", "Base Rate", "API Credits", "SLA Guarantee"],
+    ["Developer", "$0", "1,000", "Best-Effort"],
+    ["Growth", "$149", "50,000", "Removed"],
+    ["Enterprise", "$799", "Unlimited", "99.9% Uptime"]
+  ],
+  "status_code": 200
+}

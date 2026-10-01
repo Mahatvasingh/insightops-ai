@@ -1,0 +1,12 @@
+{
+  "url": "https://saasify.cloud/pricing",
+  "title": "SaaSify Cloud Pricing (Q1 2026)",
+  "raw_text": "SaaSify Cloud Pricing Update (Effective Q1 2026)\nStarter Plan: $29/month per user - Up to 5 users, basic analytics.\nPro Plan: $99/month per user - Unlimited users, workflow automation.\nEnterprise Plan: $499/month - Dedicated VPC, custom SLA.",
+  "tables": [
+    ["Tier", "Rate ($/mo)", "SSO Included"],
+    ["Starter", "$29", "No"],
+    ["Pro", "$99", "No"],
+    ["Enterprise", "$499", "No"]
+  ],
+  "status_code": 200
+}

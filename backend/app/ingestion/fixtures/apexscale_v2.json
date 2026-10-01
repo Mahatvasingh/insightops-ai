@@ -1,0 +1,11 @@
+{
+  "url": "https://apexscale.io/enterprise-pricing",
+  "title": "ApexScale Enterprise Infrastructure Rates (Q3 Update)",
+  "raw_text": "ApexScale Enterprise Rates\nCompute Tier 1: $0.04 per compute hour.\nCompute Tier 2: $0.12 per compute hour.\nRecent User Feedback: 42% increase in negative migration reviews due to breaking API v3 deprecation.",
+  "tables": [
+    ["Metric", "Rate"],
+    ["Negative Review Ratio", "21.5%"],
+    ["Compute Tier 1", "$0.04/hr"]
+  ],
+  "status_code": 200
+}

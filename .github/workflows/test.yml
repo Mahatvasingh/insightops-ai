@@ -1,0 +1,38 @@
+name: InsightOps AI CI - Pytest Test Suite
+
+on:
+  push:
+    branches: [ main, master, dev ]
+  pull_request:
+    branches: [ main, master, dev ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: 'pip'
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+
+      - name: Run Pytest Test Suite
+        env:
+          DEMO_MODE: "true"
+          SCRAPER_MODE: "demo"
+          LLM_PROVIDER: "mock"
+          DATABASE_URL: "sqlite+aiosqlite:///./test_ci.db"
+          SYNC_DATABASE_URL: "sqlite:///./test_ci.db"
+          SQLITE_CHECKPOINT_DB: "./test_checkpointer_ci.db"
+        run: |
+          cd backend
+          pytest -v --tb=short

@@ -1,0 +1,11 @@
+{
+  "url": "https://example.com/pricing",
+  "title": "Standard SaaS Pricing Baseline",
+  "raw_text": "Standard Tier: $49/mo, Business Tier: $199/mo, Enterprise: Contact Sales. Features include Webhooks, API Access, and Support.",
+  "tables": [
+    ["Plan", "Price", "Features"],
+    ["Standard", "$49/mo", "Basic API"],
+    ["Business", "$199/mo", "Full Integration"]
+  ],
+  "status_code": 200
+}

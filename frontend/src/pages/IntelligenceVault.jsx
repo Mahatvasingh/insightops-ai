@@ -47,22 +47,22 @@ export default function IntelligenceVault() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-extrabold text-white flex items-center gap-2">
-            <BookOpen className="w-5 h-5 text-indigo-400" /> Intelligence Vault & Executive Reports
+          <h2 className="text-xl font-extrabold text-slate-900 flex items-center gap-2">
+            <BookOpen className="w-5 h-5 text-emerald-600" /> Intelligence Vault & Executive Reports
           </h2>
-          <p className="text-xs text-slate-400">Searchable repository of finalized executive briefs with embedded Plotly charts and PDF export.</p>
+          <p className="text-xs text-slate-600">Searchable repository of finalized executive briefs with embedded Plotly charts and PDF export.</p>
         </div>
       </div>
 
       {/* Search Bar */}
-      <div className="flex items-center gap-3 bg-slate-900/80 border border-slate-800 rounded-xl px-4 py-2 text-xs">
+      <div className="flex items-center gap-3 bg-white border border-emerald-500/25 rounded-xl px-4 py-2 text-xs shadow-xs">
         <Search className="w-4 h-4 text-slate-400" />
         <input
           type="text"
           placeholder="Search intelligence briefs by competitor or keyword..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full bg-transparent text-white focus:outline-none"
+          className="w-full bg-transparent text-slate-900 focus:outline-none"
         />
       </div>
 
@@ -80,18 +80,18 @@ export default function IntelligenceVault() {
                   key={rep.id}
                   onClick={() => handleSelect(rep.id)}
                   className={`glass-panel p-4 rounded-xl cursor-pointer transition space-y-2 border ${
-                    isSelected ? 'border-indigo-500 bg-indigo-950/20' : 'border-slate-800 hover:border-slate-700'
+                    isSelected ? 'border-emerald-500 bg-emerald-500/10 shadow-sm' : 'border-slate-200 hover:border-slate-300'
                   }`}
                 >
                   <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-indigo-300">{rep.competitor_name}</span>
+                    <span className="font-bold text-emerald-800">{rep.competitor_name}</span>
                     <span className="badge badge-medium text-[10px]">v{rep.version}.0</span>
                   </div>
-                  <h4 className="text-xs font-bold text-white leading-snug">{rep.title}</h4>
-                  <p className="text-[11px] text-slate-400 line-clamp-2 leading-relaxed">{rep.summary}</p>
+                  <h4 className="text-xs font-bold text-slate-900 leading-snug">{rep.title}</h4>
+                  <p className="text-[11px] text-slate-600 line-clamp-2 leading-relaxed">{rep.summary}</p>
                   <div className="flex items-center justify-between text-[10px] text-slate-500 pt-1">
                     <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {new Date(rep.created_at).toLocaleDateString()}</span>
-                    <span className="text-indigo-400 font-medium flex items-center gap-1"><FileText className="w-3 h-3" /> Read Brief</span>
+                    <span className="text-emerald-700 font-medium flex items-center gap-1"><FileText className="w-3 h-3" /> Read Brief</span>
                   </div>
                 </div>
               );
@@ -103,13 +103,13 @@ export default function IntelligenceVault() {
         <div className="lg:col-span-2 glass-panel p-6 rounded-2xl space-y-6">
           {selectedReport ? (
             <>
-              <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+              <div className="flex items-center justify-between pb-4 border-b border-slate-200">
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <span className="badge badge-success text-xs">Fact-Check Verified</span>
-                    <span className="text-xs text-slate-400 font-mono">ID: {selectedReport.id.slice(0, 8)}</span>
+                    <span className="text-xs text-slate-500 font-mono">ID: {selectedReport.id.slice(0, 8)}</span>
                   </div>
-                  <h3 className="text-lg font-extrabold text-white">{selectedReport.title}</h3>
+                  <h3 className="text-lg font-extrabold text-slate-900">{selectedReport.title}</h3>
                 </div>
                 <button
                   onClick={() => api.exportReportPDF(selectedReport.id)}
@@ -121,27 +121,27 @@ export default function IntelligenceVault() {
 
               {/* Embedded Plotly Spec Chart */}
               {selectedReport.plotly_spec_json && (
-                <div className="glass-panel p-4 rounded-xl border border-slate-800">
+                <div className="glass-panel p-4 rounded-xl border border-slate-200 bg-white">
                   <PlotlyChart spec={selectedReport.plotly_spec_json} height={260} />
                 </div>
               )}
 
               {/* Markdown Executive Brief Output */}
-              <div className="prose prose-invert max-w-none text-xs text-slate-300 leading-relaxed font-sans space-y-3 bg-slate-950/60 p-5 rounded-xl border border-slate-800/80 whitespace-pre-wrap">
+              <div className="prose prose-slate max-w-none text-xs text-slate-800 leading-relaxed font-sans space-y-3 bg-white/90 p-5 rounded-xl border border-slate-200 whitespace-pre-wrap shadow-xs">
                 {selectedReport.executive_brief_md}
               </div>
 
               {/* Citations Footer */}
               {selectedReport.citations_json && (
-                <div className="p-4 rounded-xl bg-slate-900/60 border border-slate-800 text-xs space-y-2">
-                  <div className="font-bold text-white flex items-center gap-1.5">
-                    <ShieldCheck className="w-4 h-4 text-emerald-400" /> Fact-Checker Verification Citations
+                <div className="p-4 rounded-xl bg-white border border-slate-200 text-xs space-y-2 shadow-xs">
+                  <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                    <ShieldCheck className="w-4 h-4 text-emerald-600" /> Fact-Checker Verification Citations
                   </div>
-                  <div className="space-y-1 text-[11px] text-slate-400">
+                  <div className="space-y-1 text-[11px] text-slate-600">
                     {selectedReport.citations_json.map((c, i) => (
                       <div key={i} className="flex items-center justify-between">
-                        <span className="font-mono text-indigo-300">{c.source}</span>
-                        <span className="text-emerald-400 font-semibold">{(c.confidence * 100).toFixed(1)}% Match</span>
+                        <span className="font-mono text-emerald-800">{c.source}</span>
+                        <span className="text-emerald-700 font-semibold">{(c.confidence * 100).toFixed(1)}% Match</span>
                       </div>
                     ))}
                   </div>

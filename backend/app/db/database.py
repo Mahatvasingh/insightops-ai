@@ -19,7 +19,7 @@ AsyncSessionLocal = async_sessionmaker(
     autoflush=False
 )
 
-# Sync Engine for LangGraph checkpointers and sync tasks
+# Sync Engine for synchronous database initialization, migrations, and sync worker tasks
 sync_engine = create_engine(
     settings.SYNC_DATABASE_URL,
     connect_args={"check_same_thread": False} if "sqlite" in settings.SYNC_DATABASE_URL else {}
