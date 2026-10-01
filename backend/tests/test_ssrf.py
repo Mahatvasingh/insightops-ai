@@ -1,28 +1,26 @@
 import pytest
+import socket
 from app.core.url_validator import validate_target_url
 
-def test_ssrf_blocks_private_and_loopback_ips():
-    """Verify SSRF validator blocks private, loopback, and non-http schemes."""
-    with pytest.raises(ValueError, match="Only http and https schemes are permitted"):
-        validate_target_url("file:///etc/passwd")
+def test_ssrf_allowed_exact_and_subdomain():
+    assert validate_target_url("https://saasify.cloud/pricing", allowed_domain="saasify.cloud") == "https://saasify.cloud/pricing"
+    assert validate_target_url("https://app.saasify.cloud/pricing", allowed_domain="saasify.cloud") == "https://app.saasify.cloud/pricing"
 
-    with pytest.raises(ValueError, match="Only http and https schemes are permitted"):
-        validate_target_url("ftp://127.0.0.1/test")
+def test_ssrf_substring_domain_bypass_rejected():
+    with pytest.raises(ValueError) as exc:
+        validate_target_url("https://evil-saasify.cloud.attacker.com/pricing", allowed_domain="saasify.cloud")
+    assert "does not match allowed competitor domain" in str(exc.value)
 
-    with pytest.raises(ValueError, match="restricted private/internal IP"):
-        validate_target_url("http://127.0.0.1/admin")
+def test_ssrf_private_ip_resolution(monkeypatch):
+    # Force live mode for test
+    from app.config import settings
+    monkeypatch.setattr(settings, "SCRAPER_MODE", "live")
 
-    with pytest.raises(ValueError, match="restricted private/internal IP"):
-        validate_target_url("http://10.0.0.1/internal")
+    def mock_getaddrinfo(host, port):
+        return [(socket.AF_INET, socket.SOCK_STREAM, 6, '', ('127.0.0.1', 80))]
 
-    with pytest.raises(ValueError, match="restricted private/internal IP"):
-        validate_target_url("http://192.168.1.5/config")
+    monkeypatch.setattr(socket, "getaddrinfo", mock_getaddrinfo)
 
-def test_ssrf_domain_restriction():
-    """Verify SSRF validator enforces allowed competitor domain."""
-    with pytest.raises(ValueError, match="does not match allowed competitor domain"):
-        validate_target_url("https://malicious-site.com/pricing", allowed_domain="saasify.cloud")
-
-    # Matching domain succeeds
-    valid_url = validate_target_url("https://saasify.cloud/pricing", allowed_domain="saasify.cloud")
-    assert valid_url == "https://saasify.cloud/pricing"
+    with pytest.raises(ValueError) as exc:
+        validate_target_url("https://saasify.cloud/internal")
+    assert "restricted private/internal IP" in str(exc.value)

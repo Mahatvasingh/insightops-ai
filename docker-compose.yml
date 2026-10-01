@@ -12,9 +12,9 @@ services:
       - DEMO_MODE=true
       - SCRAPER_MODE=demo
       - LLM_PROVIDER=mock
-      - DATABASE_URL=sqlite+aiosqlite:///./insightops.db
-      - SYNC_DATABASE_URL=sqlite:///./insightops.db
-      - SQLITE_CHECKPOINT_DB=./checkpointer.db
+      - DATABASE_URL=sqlite+aiosqlite:////app/data/insightops.db
+      - SYNC_DATABASE_URL=sqlite:////app/data/insightops.db
+      - SQLITE_CHECKPOINT_DB=/app/data/checkpointer.db
     volumes:
       - insightops-data:/app/data
     restart: unless-stopped

@@ -16,8 +16,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Create non-root app user and persistent data dir
+RUN adduser --disabled-password --gecos "" appuser && \
+    mkdir -p /app/data && \
+    chown -R appuser:appuser /app
+
 # Copy application source
 COPY . .
+RUN chown -R appuser:appuser /app
+
+USER appuser
 
 # Expose FastAPI port
 EXPOSE 8000

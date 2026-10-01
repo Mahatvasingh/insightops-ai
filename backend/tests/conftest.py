@@ -1,18 +1,17 @@
 import os
-import pytest
-import asyncio
-from typing import AsyncGenerator
-from fastapi.testclient import TestClient
-from httpx import AsyncClient, ASGITransport
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-
-# Set environment for testing
+# Set environment variables BEFORE importing app.config or app.main
 os.environ["DEMO_MODE"] = "true"
 os.environ["SCRAPER_MODE"] = "demo"
 os.environ["LLM_PROVIDER"] = "mock"
+os.environ["SECRET_KEY"] = "testsecretkey123456789012345678901234567890"
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
 os.environ["SYNC_DATABASE_URL"] = "sqlite:///:memory:"
 os.environ["SQLITE_CHECKPOINT_DB"] = ":memory:"
+
+import pytest
+from typing import AsyncGenerator
+from httpx import AsyncClient, ASGITransport
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 
 from app.main import app
 from app.db.database import Base, get_db
@@ -22,12 +21,6 @@ from app.core.cache import cache_manager
 
 test_engine = create_async_engine("sqlite+aiosqlite:///:memory:", echo=False)
 TestingSessionLocal = async_sessionmaker(test_engine, class_=AsyncSession, expire_on_commit=False)
-
-@pytest.fixture(scope="session")
-def event_loop():
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
 
 @pytest.fixture(autouse=True)
 def reset_cache():

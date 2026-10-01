@@ -30,9 +30,10 @@ jobs:
           DEMO_MODE: "true"
           SCRAPER_MODE: "demo"
           LLM_PROVIDER: "mock"
-          DATABASE_URL: "sqlite+aiosqlite:///./test_ci.db"
-          SYNC_DATABASE_URL: "sqlite:///./test_ci.db"
-          SQLITE_CHECKPOINT_DB: "./test_checkpointer_ci.db"
+          SECRET_KEY: "c8a9f3e4b1d720516b7e820c4519fa9012e3456789abcdef0123456789abcdef"
+          DATABASE_URL: "sqlite+aiosqlite:///:memory:"
+          SYNC_DATABASE_URL: "sqlite:///:memory:"
+          SQLITE_CHECKPOINT_DB: ":memory:"
         run: |
           cd backend
           pytest -v --tb=short

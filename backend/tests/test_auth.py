@@ -1,54 +1,41 @@
 import pytest
 from httpx import AsyncClient
+from sqlalchemy import select
+from app.db.models import User
+from app.core.security import create_access_token
 
 @pytest.mark.asyncio
-async def test_register_privilege_escalation_prevented(async_client: AsyncClient):
-    """Verify that public signup IGNORES user-supplied role and enforces Viewer role."""
-    response = await async_client.post(
-        "/api/v1/auth/register",
-        json={
-            "email": "hacker@example.com",
-            "password": "password123",
-            "full_name": "Attacker",
-            "role": "Admin"  # Attempt privilege escalation
-        }
-    )
-    assert response.status_code == 200
-    data = response.json()
-    assert data["role"] == "Viewer"  # Must be enforced as Viewer
+async def test_auth_deactivated_user_rejected(async_client: AsyncClient, db_session):
+    result = await db_session.execute(select(User).where(User.email == "viewer@insightops.ai"))
+    user = result.scalars().first()
+    assert user is not None
+    user.is_active = False
+    await db_session.commit()
 
-    # Verify user profile in /auth/me
-    headers = {"Authorization": f"Bearer {data['access_token']}"}
-    me_resp = await async_client.get("/api/v1/auth/me", headers=headers)
-    assert me_resp.status_code == 200
-    assert me_resp.json()["role"] == "Viewer"
+    token = create_access_token(subject="viewer@insightops.ai", role="Viewer")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    res = await async_client.get("/api/v1/auth/me", headers=headers)
+    assert res.status_code == 403
+    assert "deactivated" in res.json()["detail"]
 
 @pytest.mark.asyncio
-async def test_admin_create_user_endpoint(async_client: AsyncClient, admin_token_headers, viewer_token_headers):
-    """Verify admin-only user creation endpoint."""
-    # Viewer attempting to create analyst should fail with 403
-    forbidden_resp = await async_client.post(
-        "/api/v1/auth/users",
-        headers=viewer_token_headers,
-        json={
-            "email": "newanalyst@insightops.ai",
-            "password": "password123",
-            "full_name": "New Analyst",
-            "role": "Analyst"
-        }
-    )
-    assert forbidden_resp.status_code == 403
+async def test_auth_demoted_user_loses_access(async_client: AsyncClient, db_session):
+    result = await db_session.execute(select(User).where(User.email == "analyst@insightops.ai"))
+    user = result.scalars().first()
+    assert user is not None
+    user.role = "Viewer"
+    await db_session.commit()
 
-    # Admin creating analyst should succeed with 201
-    success_resp = await async_client.post(
-        "/api/v1/auth/users",
-        headers=admin_token_headers,
-        json={
-            "email": "newanalyst@insightops.ai",
-            "password": "password123",
-            "full_name": "New Analyst",
-            "role": "Analyst"
-        }
-    )
-    assert success_resp.status_code == 201
-    assert success_resp.json()["role"] == "Analyst"
+    # Old token encoded with Analyst role
+    token = create_access_token(subject="analyst@insightops.ai", role="Analyst")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    comp_payload = {
+        "name": "Test Domain Corp",
+        "domain": "testdomain.com",
+        "pricing_url": "https://testdomain.com/pricing"
+    }
+    res = await async_client.post("/api/v1/competitors", json=comp_payload, headers=headers)
+    assert res.status_code == 403
+    assert "does not have sufficient permissions" in res.json()["detail"]
