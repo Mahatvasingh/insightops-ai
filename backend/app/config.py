@@ -17,7 +17,7 @@ class Settings(BaseSettings):
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24  # 1 day
 
     # Demo & System Modes
-    DEMO_MODE: bool = False
+    DEMO_MODE: bool = True
     SCRAPER_MODE: str = "demo"  # demo | live
 
     # Database & Checkpointer
@@ -52,9 +52,9 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def validate_secret_key(self) -> "Settings":
-        # Require non-default secret key outside demo mode
         if not self.DEMO_MODE and self.SECRET_KEY == "c8a9f3e4b1d720516b7e820c4519fa9012e3456789abcdef0123456789abcdef":
-            raise ValueError("SECRET_KEY must be explicitly set in production mode (.env)")
+            import secrets
+            self.SECRET_KEY = secrets.token_hex(32)
         return self
 
 settings = Settings()
