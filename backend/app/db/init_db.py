@@ -8,6 +8,19 @@ logger = logging.getLogger(__name__)
 
 def init_db():
     Base.metadata.create_all(bind=sync_engine)
+
+    # Lightweight SQLite schema auto-migration for newly added columns
+    with sync_engine.connect() as conn:
+        for table_name, table in Base.metadata.tables.items():
+            result = conn.exec_driver_sql(f"PRAGMA table_info({table_name})")
+            existing_cols = {row[1] for row in result.fetchall()}
+            for col in table.columns:
+                if col.name not in existing_cols:
+                    col_type = col.type.compile(sync_engine.dialect)
+                    logger.info(f"Adding missing column {col.name} ({col_type}) to table {table_name}")
+                    conn.exec_driver_sql(f"ALTER TABLE {table_name} ADD COLUMN {col.name} {col_type}")
+        conn.commit()
+
     if not settings.DEMO_MODE:
         logger.info("DEMO_MODE is False: Skipping demo data seeding.")
         return

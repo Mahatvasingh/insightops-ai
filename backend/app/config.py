@@ -1,7 +1,7 @@
 import os
 from typing import Optional, List
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
@@ -26,7 +26,9 @@ class Settings(BaseSettings):
     SQLITE_CHECKPOINT_DB: str = "./checkpointer.db"
 
     # LLM Settings
-    LLM_PROVIDER: str = "mock"  # mock | openai | gemini
+    LLM_PROVIDER: str = "mock"  # mock | groq | openai | gemini
+    GROQ_API_KEY: Optional[str] = None
+    GROQ_MODEL: str = "llama-3.3-70b-versatile"
     OPENAI_API_KEY: Optional[str] = None
     GEMINI_API_KEY: Optional[str] = None
     DEFAULT_LLM_MODEL: str = "gpt-4o-mini"
@@ -48,12 +50,11 @@ class Settings(BaseSettings):
     CACHE_TTL_SCRAPE: int = 3600  # 1 hour
     CACHE_TTL_LLM: int = 1800     # 30 mins
 
-    @field_validator("SECRET_KEY", mode="after")
-    def validate_secret_key(cls, v: str, info) -> str:
+    @model_validator(mode="after")
+    def validate_secret_key(self) -> "Settings":
         # Require non-default secret key outside demo mode
-        demo_mode = info.data.get("DEMO_MODE", False)
-        if not demo_mode and v == "c8a9f3e4b1d720516b7e820c4519fa9012e3456789abcdef0123456789abcdef":
+        if not self.DEMO_MODE and self.SECRET_KEY == "c8a9f3e4b1d720516b7e820c4519fa9012e3456789abcdef0123456789abcdef":
             raise ValueError("SECRET_KEY must be explicitly set in production mode (.env)")
-        return v
+        return self
 
 settings = Settings()

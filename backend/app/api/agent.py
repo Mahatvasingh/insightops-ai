@@ -36,6 +36,7 @@ class AgentRunRequest(BaseModel):
     competitor_id: str
     target_url: Optional[str] = None
     user_query: Optional[str] = "Perform competitive deep dive on pricing shifts and feature changes."
+    force_refresh: Optional[bool] = False
 
 class HITLResumeRequest(BaseModel):
     approved: bool
@@ -126,7 +127,7 @@ def _persist_report_and_alerts(db, ar: AgentRun, final_vals: Dict[str, Any], com
                 )
                 db.add(alert)
 
-def run_graph_background_task(thread_id: str, competitor_id: str, competitor_name: str, target_url: str, user_query: str):
+def run_graph_background_task(thread_id: str, competitor_id: str, competitor_name: str, target_url: str, user_query: str, force_refresh: bool = False):
     """
     Decoupled Asynchronous Background Task executing the LangGraph Multi-Agent StateGraph.
     """
@@ -162,7 +163,7 @@ def run_graph_background_task(thread_id: str, competitor_id: str, competitor_nam
         "competitor_name": competitor_name,
         "target_url": target_url,
         "user_query": user_query,
-        "force_refresh": False,
+        "force_refresh": force_refresh,
         "raw_text": "",
         "parsed_tables": [],
         "extracted_facts": [],
@@ -281,7 +282,8 @@ async def trigger_agent_run(
         competitor_id=competitor.id,
         competitor_name=competitor.name,
         target_url=validated_url,
-        user_query=req_data.user_query
+        user_query=req_data.user_query,
+        force_refresh=bool(req_data.force_refresh)
     )
 
     return {
@@ -300,12 +302,15 @@ async def get_stream_token(thread_id: str, user=Depends(require_viewer)):
     return {"stream_token": stream_token, "expires_in_seconds": 60}
 
 @router.get("/stream/{job_id}")
-async def stream_agent_logs(job_id: str, token: str = Query(...)):
+async def stream_agent_logs(job_id: str, token: Optional[str] = Query(None)):
     """
     Server-Sent Events (SSE) Streaming Endpoint.
-    Requires short-lived stream token verification.
+    Requires short-lived stream token verification (optional in DEMO_MODE).
     """
-    verify_stream_token(token, job_id)
+    if token:
+        verify_stream_token(token, job_id)
+    elif not settings.DEMO_MODE:
+        raise HTTPException(status_code=401, detail="Stream token required")
     buffer_key = f"stream:{job_id}"
 
     async def event_generator():

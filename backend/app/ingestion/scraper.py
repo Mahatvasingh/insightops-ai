@@ -226,7 +226,10 @@ class WebScraperEngine:
             hidden.decompose()
 
         for tag in soup.find_all(style=True):
-            style_str = tag["style"].lower()
+            attrs = getattr(tag, "attrs", None)
+            if not attrs or "style" not in attrs:
+                continue
+            style_str = str(attrs.get("style", "")).lower()
             if "display:none" in style_str.replace(" ", "") or "visibility:hidden" in style_str.replace(" ", ""):
                 tag.decompose()
 

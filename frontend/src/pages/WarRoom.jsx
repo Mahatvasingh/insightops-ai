@@ -16,6 +16,7 @@ export default function WarRoom({ selectedCompetitor }) {
   const [plotlySpec, setPlotlySpec] = useState(null);
   const [writerDraft, setWriterDraft] = useState('');
   const [hitlPrompt, setHitlPrompt] = useState(false);
+  const [forceRefresh, setForceRefresh] = useState(false);
 
   useEffect(() => {
     api.getCompetitors().then((list) => {
@@ -49,7 +50,7 @@ export default function WarRoom({ selectedCompetitor }) {
     setActiveNode('Supervisor');
 
     try {
-      const res = await api.triggerAgentRun(selectedCompId, targetUrl, userQuery);
+      const res = await api.triggerAgentRun(selectedCompId, targetUrl, userQuery, forceRefresh);
       setActiveJobId(res.job_id);
 
       // Connect SSE Stream
@@ -135,21 +136,33 @@ export default function WarRoom({ selectedCompetitor }) {
           />
         </div>
 
-        <button
-          onClick={startAgentRun}
-          disabled={isRunning || !selectedCompId}
-          className="btn-primary w-full justify-center disabled:opacity-50 py-2.5"
-        >
-          {isRunning ? (
-            <>
-              <RefreshCw className="w-4 h-4 animate-spin text-white" /> Agents Executing...
-            </>
-          ) : (
-            <>
-              <Play className="w-4 h-4 fill-white" /> Trigger LangGraph Run
-            </>
-          )}
-        </button>
+        <div className="flex flex-col gap-1.5">
+          <button
+            onClick={startAgentRun}
+            disabled={isRunning || !selectedCompId}
+            className="btn-primary w-full justify-center disabled:opacity-50 py-2.5"
+          >
+            {isRunning ? (
+              <>
+                <RefreshCw className="w-4 h-4 animate-spin text-white" /> Agents Executing...
+              </>
+            ) : (
+              <>
+                <Play className="w-4 h-4 fill-white" /> Trigger LangGraph Run
+              </>
+            )}
+          </button>
+          <label className="flex items-center gap-1.5 text-[11px] text-slate-400 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={forceRefresh}
+              onChange={(e) => setForceRefresh(e.target.checked)}
+              disabled={isRunning}
+              className="rounded bg-slate-900 border-slate-700 text-indigo-500 focus:ring-0 w-3.5 h-3.5"
+            />
+            <span>Force Live Scrape (Bypass Cache)</span>
+          </label>
+        </div>
       </div>
 
       {/* Visual State Graph Flow Cards */}

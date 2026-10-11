@@ -86,14 +86,24 @@ export const api = {
   deleteCompetitor: (id) => authFetch(`/competitors/${id}`, { method: 'DELETE' }),
 
   // Agent Runs & Streaming
-  triggerAgentRun: (competitor_id, target_url, user_query) => 
+  triggerAgentRun: (competitor_id, target_url, user_query, force_refresh = false) => 
     authFetch('/agent/run', {
       method: 'POST',
-      body: JSON.stringify({ competitor_id, target_url, user_query })
+      body: JSON.stringify({ competitor_id, target_url, user_query, force_refresh })
     }),
 
-  connectSSE: (jobId, onEvent, onError) => {
-    const eventSource = new EventSource(`${API_BASE}/agent/stream/${jobId}`);
+  connectSSE: async (jobId, onEvent, onError) => {
+    let streamUrl = `${API_BASE}/agent/stream/${jobId}`;
+    try {
+      const res = await authFetch(`/agent/stream-token/${jobId}`, { method: 'POST' });
+      if (res?.stream_token) {
+        streamUrl += `?token=${encodeURIComponent(res.stream_token)}`;
+      }
+    } catch (e) {
+      console.warn("Could not fetch stream token, fallback to direct stream:", e);
+    }
+
+    const eventSource = new EventSource(streamUrl);
     
     eventSource.onmessage = (e) => {
       try {
