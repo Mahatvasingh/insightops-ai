@@ -1,4 +1,5 @@
-const API_BASE = '/api/v1';
+const rawBase = import.meta.env.VITE_API_BASE || '';
+const API_BASE = rawBase ? `${rawBase.replace(/\/$/, '')}/api/v1` : '/api/v1';
 
 let authToken = localStorage.getItem('insightops_token') || '';
 let currentUserRole = localStorage.getItem('insightops_role') || 'Admin';
