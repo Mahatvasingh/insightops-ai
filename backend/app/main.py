@@ -62,14 +62,34 @@ app.include_router(agent_router, prefix=settings.API_V1_STR)
 app.include_router(analytics_router, prefix=settings.API_V1_STR)
 app.include_router(reports_router, prefix=settings.API_V1_STR)
 
-@app.get("/")
-async def root():
-    return {
-        "app": settings.PROJECT_NAME,
-        "status": "online",
-        "docs_url": "/docs",
-        "api_v1": settings.API_V1_STR
-    }
+import os
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+
+# Static Frontend SPA Serving (Enables Single-URL Full App Access)
+static_dir = os.path.join(os.path.dirname(__file__), "static")
+if os.path.exists(static_dir):
+    assets_dir = os.path.join(static_dir, "assets")
+    if os.path.exists(assets_dir):
+        app.mount("/assets", StaticFiles(directory=assets_dir), name="assets")
+
+    @app.get("/{full_path:path}")
+    async def serve_spa(full_path: str):
+        if full_path.startswith("api/") or full_path in ["docs", "openapi.json", "redoc"]:
+            return None
+        file_path = os.path.join(static_dir, full_path)
+        if full_path and os.path.exists(file_path) and os.path.isfile(file_path):
+            return FileResponse(file_path)
+        return FileResponse(os.path.join(static_dir, "index.html"))
+else:
+    @app.get("/")
+    async def root():
+        return {
+            "app": settings.PROJECT_NAME,
+            "status": "online",
+            "docs_url": "/docs",
+            "api_v1": settings.API_V1_STR
+        }
 
 if __name__ == "__main__":
     import uvicorn
