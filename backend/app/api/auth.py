@@ -16,6 +16,7 @@ class UserCreate(BaseModel):
     email: EmailStr
     password: str
     full_name: str
+    role: Optional[str] = "Viewer"  # Admin, Analyst, Viewer
 
 class AdminUserCreate(BaseModel):
     email: EmailStr
@@ -34,10 +35,35 @@ class TokenResponse(BaseModel):
 
 @router.post("/login", response_model=TokenResponse)
 @limiter.limit("10/minute")
-async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
-    result = await db.execute(select(User).where(User.email == form_data.username))
+async def login(request: Request, db: AsyncSession = Depends(get_db)):
+    content_type = request.headers.get("content-type", "")
+    username = None
+    password = None
+
+    if "application/json" in content_type:
+        try:
+            body = await request.json()
+            username = body.get("username") or body.get("email")
+            password = body.get("password")
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid JSON body")
+    else:
+        try:
+            form_data = await request.form()
+            username = form_data.get("username") or form_data.get("email")
+            password = form_data.get("password")
+        except Exception:
+            raise HTTPException(status_code=400, detail="Invalid form data")
+
+    if not username or not password:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username/email and password are required"
+        )
+
+    result = await db.execute(select(User).where(User.email == username))
     user = result.scalars().first()
-    if not user or not verify_password(form_data.password, user.hashed_password):
+    if not user or not verify_password(password, user.hashed_password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password",
@@ -59,29 +85,30 @@ async def login(request: Request, form_data: OAuth2PasswordRequestForm = Depends
 async def register(request: Request, user_in: UserCreate, db: AsyncSession = Depends(get_db)):
     """
     Public registration endpoint.
-    ALWAYS assigns 'Viewer' role to prevent privilege escalation.
+    Allows user to sign up with selected role (Admin, Analyst, Viewer).
     """
     result = await db.execute(select(User).where(User.email == user_in.email))
     if result.scalars().first():
         raise HTTPException(status_code=400, detail="User with this email already exists")
 
-    public_role = "Viewer"
+    valid_roles = ["Admin", "Analyst", "Viewer"]
+    assigned_role = user_in.role if user_in.role in valid_roles else "Viewer"
     new_user = User(
         email=user_in.email,
         hashed_password=get_password_hash(user_in.password),
         full_name=user_in.full_name,
-        role=public_role,
+        role=assigned_role,
         is_active=True
     )
     db.add(new_user)
     await db.commit()
     await db.refresh(new_user)
 
-    access_token = create_access_token(subject=new_user.email, role=public_role)
+    access_token = create_access_token(subject=new_user.email, role=assigned_role)
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "role": public_role,
+        "role": assigned_role,
         "full_name": new_user.full_name
     }
 

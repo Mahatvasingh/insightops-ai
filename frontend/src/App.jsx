@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import Sidebar from './components/Sidebar';
+import AuthModal from './components/AuthModal';
 import ExecutiveDashboard from './pages/ExecutiveDashboard';
 import CompetitorTracker from './pages/CompetitorTracker';
 import WarRoom from './pages/WarRoom';
@@ -9,12 +10,24 @@ import IntelligenceVault from './pages/IntelligenceVault';
 import { api } from './api';
 
 export default function App() {
+  const [currentUser, setCurrentUser] = useState(() => api.getUser());
+  const [isAuthOpen, setIsAuthOpen] = useState(() => !api.getUser());
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [currentRole, setCurrentRole] = useState(api.getRole());
   const [selectedCompForWarRoom, setSelectedCompForWarRoom] = useState(null);
   const [pendingCount, setPendingCount] = useState(0);
 
+  // Sync unauthorized events (e.g. expired tokens)
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      setCurrentUser(null);
+      setIsAuthOpen(true);
+    };
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
+  }, []);
+
   const fetchPendingCount = async () => {
+    if (!currentUser) return;
     try {
       const pending = await api.getPendingHITL();
       setPendingCount(pending.length);
@@ -24,10 +37,25 @@ export default function App() {
   };
 
   useEffect(() => {
-    fetchPendingCount();
-    const interval = setInterval(fetchPendingCount, 10000);
-    return () => clearInterval(interval);
-  }, [currentRole]);
+    if (currentUser) {
+      fetchPendingCount();
+      const interval = setInterval(fetchPendingCount, 10000);
+      return () => clearInterval(interval);
+    } else {
+      setPendingCount(0);
+    }
+  }, [currentUser]);
+
+  const handleAuthSuccess = (user) => {
+    setCurrentUser(user);
+    setIsAuthOpen(false);
+  };
+
+  const handleLogout = () => {
+    api.logout();
+    setCurrentUser(null);
+    setIsAuthOpen(true);
+  };
 
   const handleTriggerRunFromTracker = (comp) => {
     setSelectedCompForWarRoom(comp);
@@ -36,7 +64,16 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
-      <Navbar currentRole={currentRole} onRoleChange={setCurrentRole} />
+      <Navbar 
+        currentUser={currentUser} 
+        onLogout={handleLogout} 
+        onOpenAuth={() => setIsAuthOpen(true)} 
+      />
+
+      {/* Show AuthModal if user is not authenticated or explicitly opens auth */}
+      {(!currentUser || isAuthOpen) && (
+        <AuthModal onAuthSuccess={handleAuthSuccess} />
+      )}
 
       <div className="flex-1 flex max-w-[1600px] w-full mx-auto">
         <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} pendingCount={pendingCount} />

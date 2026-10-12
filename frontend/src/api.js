@@ -1,64 +1,63 @@
 const rawBase = import.meta.env.VITE_API_BASE || '';
 const API_BASE = rawBase ? `${rawBase.replace(/\/$/, '')}/api/v1` : '/api/v1';
 
-let authToken = localStorage.getItem('insightops_token') || '';
-let currentUserRole = localStorage.getItem('insightops_role') || 'Admin';
-
-export const setAuthRole = async (role) => {
-  currentUserRole = role;
-  localStorage.setItem('insightops_role', role);
-  // Auto-authenticate as chosen demo role (Admin, Analyst, Viewer)
-  const emailMap = {
-    Admin: 'admin@insightops.ai',
-    Analyst: 'analyst@insightops.ai',
-    Viewer: 'viewer@insightops.ai'
-  };
-  const passwordMap = {
-    Admin: 'admin123',
-    Analyst: 'analyst123',
-    Viewer: 'viewer123'
-  };
-
-  try {
-    const formData = new URLSearchParams();
-    formData.append('username', emailMap[role]);
-    formData.append('password', passwordMap[role]);
-
-    const res = await fetch(`${API_BASE}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: formData
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      authToken = data.access_token;
-      localStorage.setItem('insightops_token', authToken);
-      return data;
-    }
-  } catch (err) {
-    console.error("Auth role switch error:", err);
+export const DEMO_PRESETS = [
+  {
+    role: 'Admin',
+    email: 'admin@insightops.ai',
+    password: 'admin123',
+    badge: 'Full Access',
+    desc: 'Autonomous agent execution, competitor management & deletion.'
+  },
+  {
+    role: 'Analyst',
+    email: 'analyst@insightops.ai',
+    password: 'analyst123',
+    badge: 'Operator',
+    desc: 'Trigger intelligence runs, human review inbox & report generation.'
+  },
+  {
+    role: 'Viewer',
+    email: 'viewer@insightops.ai',
+    password: 'viewer123',
+    badge: 'Read Only',
+    desc: 'Executive dashboard, intelligence vault & metrics viewing.'
   }
-};
+];
 
-const authFetch = async (url, options = {}) => {
-  if (!authToken) {
-    await setAuthRole(currentUserRole);
+let authToken = localStorage.getItem('insightops_token') || '';
+let currentUser = null;
+try {
+  const savedUser = localStorage.getItem('insightops_user');
+  if (savedUser) {
+    currentUser = JSON.parse(savedUser);
+  }
+} catch (e) {
+  currentUser = null;
+}
+
+export const authFetch = async (url, options = {}) => {
+  const token = localStorage.getItem('insightops_token');
+  if (!token) {
+    throw new Error('Authentication required');
   }
 
   const headers = {
     'Content-Type': 'application/json',
-    'Authorization': `Bearer ${authToken}`,
+    'Authorization': `Bearer ${token}`,
     ...(options.headers || {})
   };
 
-  let res = await fetch(`${API_BASE}${url}`, { ...options, headers });
+  const res = await fetch(`${API_BASE}${url}`, { ...options, headers });
 
   if (res.status === 401) {
-    // Retry login token
-    await setAuthRole(currentUserRole);
-    headers['Authorization'] = `Bearer ${authToken}`;
-    res = await fetch(`${API_BASE}${url}`, { ...options, headers });
+    localStorage.removeItem('insightops_token');
+    localStorage.removeItem('insightops_user');
+    authToken = '';
+    currentUser = null;
+    window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+    const errorBody = await res.json().catch(() => ({ detail: 'Session expired. Please sign in again.' }));
+    throw new Error(errorBody.detail || 'Session expired');
   }
 
   if (!res.ok) {
@@ -70,8 +69,77 @@ const authFetch = async (url, options = {}) => {
 };
 
 export const api = {
-  getRole: () => currentUserRole,
-  setRole: setAuthRole,
+  // Authentication
+  getToken: () => localStorage.getItem('insightops_token'),
+  getUser: () => {
+    try {
+      const saved = localStorage.getItem('insightops_user');
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  },
+  getRole: () => {
+    const u = api.getUser();
+    return u?.role || null;
+  },
+
+  login: async (email, password) => {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username: email, password })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Login failed' }));
+      throw new Error(err.detail || 'Incorrect email or password');
+    }
+
+    const data = await res.json();
+    authToken = data.access_token;
+    currentUser = {
+      email,
+      full_name: data.full_name,
+      role: data.role
+    };
+
+    localStorage.setItem('insightops_token', data.access_token);
+    localStorage.setItem('insightops_user', JSON.stringify(currentUser));
+    return currentUser;
+  },
+
+  register: async ({ full_name, email, password, role = 'Viewer' }) => {
+    const res = await fetch(`${API_BASE}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ full_name, email, password, role })
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: 'Registration failed' }));
+      throw new Error(err.detail || 'Registration failed');
+    }
+
+    const data = await res.json();
+    authToken = data.access_token;
+    currentUser = {
+      email,
+      full_name: data.full_name,
+      role: data.role
+    };
+
+    localStorage.setItem('insightops_token', data.access_token);
+    localStorage.setItem('insightops_user', JSON.stringify(currentUser));
+    return currentUser;
+  },
+
+  logout: () => {
+    authToken = '';
+    currentUser = null;
+    localStorage.removeItem('insightops_token');
+    localStorage.removeItem('insightops_user');
+  },
 
   // Analytics
   getAnalytics: () => authFetch('/analytics/overview'),

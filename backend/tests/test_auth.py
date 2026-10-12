@@ -39,3 +39,57 @@ async def test_auth_demoted_user_loses_access(async_client: AsyncClient, db_sess
     res = await async_client.post("/api/v1/competitors", json=comp_payload, headers=headers)
     assert res.status_code == 403
     assert "does not have sufficient permissions" in res.json()["detail"]
+
+@pytest.mark.asyncio
+async def test_auth_login_json_and_form(async_client: AsyncClient):
+    # Test JSON login
+    res_json = await async_client.post("/api/v1/auth/login", json={
+        "username": "admin@insightops.ai",
+        "password": "admin123"
+    })
+    assert res_json.status_code == 200
+    data_json = res_json.json()
+    assert "access_token" in data_json
+    assert data_json["role"] == "Admin"
+
+    # Test Form login
+    res_form = await async_client.post(
+        "/api/v1/auth/login",
+        data={"username": "analyst@insightops.ai", "password": "analyst123"},
+        headers={"Content-Type": "application/x-www-form-urlencoded"}
+    )
+    assert res_form.status_code == 200
+    data_form = res_form.json()
+    assert "access_token" in data_form
+    assert data_form["role"] == "Analyst"
+
+@pytest.mark.asyncio
+async def test_auth_login_invalid_credentials(async_client: AsyncClient):
+    res = await async_client.post("/api/v1/auth/login", json={
+        "username": "admin@insightops.ai",
+        "password": "wrongpassword"
+    })
+    assert res.status_code == 401
+    assert "Incorrect email or password" in res.json()["detail"]
+
+@pytest.mark.asyncio
+async def test_auth_register_with_role(async_client: AsyncClient):
+    # Register an Analyst
+    payload = {
+        "email": "newanalyst@insightops.ai",
+        "password": "securepassword123",
+        "full_name": "Test New Analyst",
+        "role": "Analyst"
+    }
+    res = await async_client.post("/api/v1/auth/register", json=payload)
+    assert res.status_code == 200
+    data = res.json()
+    assert "access_token" in data
+    assert data["role"] == "Analyst"
+    assert data["full_name"] == "Test New Analyst"
+
+    # Test duplicate register
+    res_dup = await async_client.post("/api/v1/auth/register", json=payload)
+    assert res_dup.status_code == 400
+    assert "already exists" in res_dup.json()["detail"]
+
