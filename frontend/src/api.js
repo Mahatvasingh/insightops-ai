@@ -109,11 +109,11 @@ export const api = {
     return currentUser;
   },
 
-  register: async ({ full_name, email, password, role = 'Viewer' }) => {
+  register: async ({ full_name, email, password, role = 'Viewer', invite_code = '' }) => {
     const res = await fetch(`${API_BASE}/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ full_name, email, password, role })
+      body: JSON.stringify({ full_name, email, password, role, invite_code: invite_code || undefined })
     });
 
     if (!res.ok) {

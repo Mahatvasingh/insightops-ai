@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from pydantic import BaseModel, EmailStr
 
+from app.config import settings
 from app.db.database import get_db
 from app.db.models import User
 from app.core.security import verify_password, get_password_hash, create_access_token, require_admin, get_current_user
@@ -17,6 +18,7 @@ class UserCreate(BaseModel):
     password: str
     full_name: str
     role: Optional[str] = "Viewer"  # Admin, Analyst, Viewer
+    invite_code: Optional[str] = None
 
 class AdminUserCreate(BaseModel):
     email: EmailStr
@@ -92,7 +94,19 @@ async def register(request: Request, user_in: UserCreate, db: AsyncSession = Dep
         raise HTTPException(status_code=400, detail="User with this email already exists")
 
     valid_roles = ["Admin", "Analyst", "Viewer"]
-    assigned_role = user_in.role if user_in.role in valid_roles else "Viewer"
+    requested_role = user_in.role if user_in.role in valid_roles else "Viewer"
+
+    # Require valid Organization Invite Code for elevated roles (Admin, Analyst)
+    if requested_role in ["Admin", "Analyst"]:
+        submitted_code = (user_in.invite_code or "").strip()
+        expected_code = settings.ADMIN_INVITE_CODE.strip()
+        if submitted_code != expected_code:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Invalid or missing Organization Invite Code required to register as {requested_role}."
+            )
+
+    assigned_role = requested_role
     new_user = User(
         email=user_in.email,
         hashed_password=get_password_hash(user_in.password),

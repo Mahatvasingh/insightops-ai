@@ -14,7 +14,8 @@ import {
   Crown, 
   BrainCircuit, 
   BarChart3, 
-  Loader2 
+  Loader2,
+  KeyRound 
 } from 'lucide-react';
 import { api, DEMO_PRESETS } from '../api';
 
@@ -29,6 +30,7 @@ export default function AuthModal({ onAuthSuccess }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [selectedRole, setSelectedRole] = useState('Analyst'); // default for signup
+  const [inviteCode, setInviteCode] = useState('');
 
   const roleDefinitions = [
     {
@@ -94,11 +96,15 @@ export default function AuthModal({ onAuthSuccess }) {
         if (password.length < 6) {
           throw new Error('Password must be at least 6 characters');
         }
+        if (selectedRole !== 'Viewer' && !inviteCode.trim()) {
+          throw new Error(`An Organization Invite Code is required to register with ${selectedRole} privileges.`);
+        }
         const user = await api.register({
           full_name: fullName,
           email,
           password,
-          role: selectedRole
+          role: selectedRole,
+          invite_code: inviteCode.trim()
         });
         onAuthSuccess(user);
       }
@@ -369,6 +375,37 @@ export default function AuthModal({ onAuthSuccess }) {
                   })}
                 </div>
               </div>
+
+              {/* Organization Invite Code for elevated roles */}
+              {selectedRole !== 'Viewer' ? (
+                <div className="p-3.5 rounded-xl border border-indigo-500/30 bg-indigo-500/10 space-y-2 animate-in fade-in duration-200">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-semibold text-indigo-300 flex items-center gap-1.5">
+                      <KeyRound className="w-3.5 h-3.5 text-indigo-400" />
+                      Organization Passkey / Invite Code
+                    </label>
+                    <span className="badge badge-medium text-[9px] py-0 px-1.5 font-mono">Required for {selectedRole}</span>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={inviteCode}
+                      onChange={(e) => setInviteCode(e.target.value)}
+                      placeholder="e.g. INSIGHTOPS-2026"
+                      required
+                      className="w-full bg-slate-950/80 border border-slate-800 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 font-mono tracking-wider focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
+                    />
+                  </div>
+                  <p className="text-[10px] text-slate-400 leading-tight">
+                    Elevated permissions require an organization invite code. <span className="text-indigo-300 font-medium">Demo Passkey: <code className="bg-slate-900/90 border border-slate-800 px-1 py-0.5 rounded text-indigo-200 font-mono">INSIGHTOPS-2026</code></span>
+                  </p>
+                </div>
+              ) : (
+                <div className="p-3 rounded-xl border border-slate-800/80 bg-slate-950/40 text-[11px] text-slate-400 flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0"></span>
+                  <span>Public viewer account — no invite passkey required. Read-only access to market intelligence.</span>
+                </div>
+              )}
 
               <button
                 type="submit"

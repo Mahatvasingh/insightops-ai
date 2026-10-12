@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     # Demo & System Modes
     DEMO_MODE: bool = True
     SCRAPER_MODE: str = "demo"  # demo | live
+    ADMIN_INVITE_CODE: str = "INSIGHTOPS-2026"
 
     # Database & Checkpointer
     DATABASE_URL: str = "sqlite+aiosqlite:///./insightops.db"
