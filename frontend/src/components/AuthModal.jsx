@@ -17,7 +17,7 @@ import {
   Loader2,
   KeyRound 
 } from 'lucide-react';
-import { api, DEMO_PRESETS } from '../api';
+import { api } from '../api';
 
 export default function AuthModal({ onAuthSuccess }) {
   const [mode, setMode] = useState('login'); // 'login' | 'signup'
@@ -61,21 +61,6 @@ export default function AuthModal({ onAuthSuccess }) {
       description: 'Inspect executive dashboards, browse intelligence vault & review metrics.'
     }
   ];
-
-  const handleQuickLogin = async (preset) => {
-    setError('');
-    setEmail(preset.email);
-    setPassword(preset.password);
-    setLoading(true);
-    try {
-      const user = await api.login(preset.email, preset.password);
-      onAuthSuccess(user);
-    } catch (err) {
-      setError(err.message || 'Quick login failed');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -173,55 +158,10 @@ export default function AuthModal({ onAuthSuccess }) {
         {/* Body Content */}
         <div className="p-8 pt-2">
           {mode === 'login' ? (
-            <div className="space-y-6">
-              {/* Quick Preset Logins */}
-              <div>
-                <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider block mb-2.5">
-                  1-Click Role Login (JWT Authenticated)
-                </label>
-                <div className="grid grid-cols-3 gap-2.5">
-                  {DEMO_PRESETS.map((p) => {
-                    const isSelected = email === p.email;
-                    const roleBadgeColor = 
-                      p.role === 'Admin' ? 'text-indigo-400 border-indigo-500/30 bg-indigo-500/10' :
-                      p.role === 'Analyst' ? 'text-emerald-400 border-emerald-500/30 bg-emerald-500/10' :
-                      'text-amber-400 border-amber-500/30 bg-amber-500/10';
-
-                    return (
-                      <button
-                        key={p.role}
-                        type="button"
-                        onClick={() => handleQuickLogin(p)}
-                        disabled={loading}
-                        className={`text-left p-2.5 rounded-xl border transition group relative ${
-                          isSelected
-                            ? 'border-indigo-500 bg-slate-800/80 shadow-md'
-                            : 'border-slate-800/90 bg-slate-950/50 hover:bg-slate-800/50 hover:border-slate-700'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between mb-1">
-                          <span className="text-xs font-bold text-white group-hover:text-indigo-300 transition">
-                            {p.role}
-                          </span>
-                          <span className={`text-[10px] px-1.5 py-0.2 rounded border font-mono ${roleBadgeColor}`}>
-                            {p.badge}
-                          </span>
-                        </div>
-                        <p className="text-[10px] text-slate-400 line-clamp-1 leading-snug">
-                          {p.desc}
-                        </p>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="relative flex items-center justify-center">
-                <div className="border-t border-slate-800 w-full"></div>
-                <span className="bg-slate-900 px-3 text-[11px] text-slate-500 uppercase tracking-wider font-semibold">
-                  Or enter credentials
-                </span>
-                <div className="border-t border-slate-800 w-full"></div>
+            <div className="space-y-5">
+              <div className="p-3 rounded-xl border border-slate-800/80 bg-slate-950/40 text-[11px] text-slate-400 flex items-center justify-between">
+                <span>Sign in with your registered account credentials.</span>
+                <span className="badge badge-medium text-[9px] py-0 px-1.5 font-mono">RBAC Auth</span>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -233,7 +173,7 @@ export default function AuthModal({ onAuthSuccess }) {
                       type="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      placeholder="admin@insightops.ai"
+                      placeholder="e.g. you@example.com"
                       required
                       className="w-full bg-slate-950/70 border border-slate-800 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition"
                     />

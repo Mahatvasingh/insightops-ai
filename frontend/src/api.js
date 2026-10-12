@@ -1,29 +1,7 @@
 const rawBase = import.meta.env.VITE_API_BASE || '';
 const API_BASE = rawBase ? `${rawBase.replace(/\/$/, '')}/api/v1` : '/api/v1';
 
-export const DEMO_PRESETS = [
-  {
-    role: 'Admin',
-    email: 'admin@insightops.ai',
-    password: 'admin123',
-    badge: 'Full Access',
-    desc: 'Autonomous agent execution, competitor management & deletion.'
-  },
-  {
-    role: 'Analyst',
-    email: 'analyst@insightops.ai',
-    password: 'analyst123',
-    badge: 'Operator',
-    desc: 'Trigger intelligence runs, human review inbox & report generation.'
-  },
-  {
-    role: 'Viewer',
-    email: 'viewer@insightops.ai',
-    password: 'viewer123',
-    badge: 'Read Only',
-    desc: 'Executive dashboard, intelligence vault & metrics viewing.'
-  }
-];
+
 
 let authToken = localStorage.getItem('insightops_token') || '';
 let currentUser = null;

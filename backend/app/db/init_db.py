@@ -28,27 +28,12 @@ def init_db():
     logger.warning("DEMO_MODE is True: Seeding demo credentials and fixture data into database.")
     session = SyncSessionLocal()
     try:
-        # Seed demo users if none exist
-        if not session.query(User).filter_by(email="admin@insightops.ai").first():
-            admin_user = User(
-                email="admin@insightops.ai",
-                hashed_password=get_password_hash("admin123"),
-                full_name="Chief Intelligence Officer (Demo Admin)",
-                role="Admin"
-            )
-            analyst_user = User(
-                email="analyst@insightops.ai",
-                hashed_password=get_password_hash("analyst123"),
-                full_name="Lead Market Analyst (Demo Analyst)",
-                role="Analyst"
-            )
-            viewer_user = User(
-                email="viewer@insightops.ai",
-                hashed_password=get_password_hash("viewer123"),
-                full_name="Executive Viewer (Demo Viewer)",
-                role="Viewer"
-            )
-            session.add_all([admin_user, analyst_user, viewer_user])
+        # Security Hardening: Purge legacy publicly-known demo credentials
+        legacy_demo_emails = ["admin@insightops.ai", "analyst@insightops.ai", "viewer@insightops.ai"]
+        purged = session.query(User).filter(User.email.in_(legacy_demo_emails)).delete(synchronize_session=False)
+        if purged > 0:
+            session.commit()
+            logger.info(f"Security: Purged {purged} legacy publicly-known demo accounts from database.")
 
         # Seed competitors & demo intelligence if DB is empty
         if session.query(Competitor).count() == 0:
