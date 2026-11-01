@@ -54,10 +54,11 @@ def researcher_node(state: AgentState) -> Dict[str, Any]:
         finally:
             db.close()
 
+    mode_label = "Live Web Scrape" if settings.SCRAPER_MODE.lower() == "live" else f"Demo version: {demo_version}"
     logs.append({
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "node": "Researcher",
-        "message": f"Scraping web data for {competitor_name} at {target_url} (Demo version: {demo_version})."
+        "message": f"Scraping web data for {competitor_name} at {target_url} ({mode_label})."
     })
 
     # 2. Scrape payload

@@ -140,6 +140,13 @@ Automated market intelligence workflow analyzed competitive signals for **{compe
             refuted.append(c_copy)
         return refuted
 
+def _clean_json_content(content: str) -> str:
+    cleaned = content.strip()
+    if cleaned.startswith("```"):
+        cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.MULTILINE)
+        cleaned = re.sub(r"\s*```$", "", cleaned, flags=re.MULTILINE)
+    return cleaned.strip()
+
 class OpenAIClient(LLMClient):
     """Real OpenAI client provider using structured API calls."""
     provider_name: str = "openai"
@@ -166,7 +173,7 @@ class OpenAIClient(LLMClient):
         }
 
         try:
-            res = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload, timeout=15)
+            res = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload, timeout=20)
             if res.status_code == 200:
                 data = res.json()
                 usage = data.get("usage", {})
@@ -174,8 +181,10 @@ class OpenAIClient(LLMClient):
                 cache_manager.record_llm_call(tokens=tokens_used)
 
                 content = data["choices"][0]["message"]["content"]
-                parsed_json = json.loads(content)
+                parsed_json = json.loads(_clean_json_content(content))
                 return ExtractedCompetitorData(**parsed_json)
+            else:
+                logger.error(f"OpenAI API call failed with status {res.status_code}: {res.text}")
         except Exception as err:
             logger.error(f"OpenAI API call failed: {err}")
 
@@ -183,6 +192,44 @@ class OpenAIClient(LLMClient):
         return MockLLMClient().extract_structured(raw_text, competitor_name)
 
     def generate_report(self, verified_claims: List[Dict[str, Any]], competitor_name: str, target_url: str) -> str:
+        claims_summary = json.dumps(verified_claims, indent=2)
+        prompt = f"""You are the Executive Intelligence Writer for InsightOps AI.
+Synthesize an executive-ready market intelligence brief for **{competitor_name}** based on these verified claims:
+{claims_summary}
+
+Target URL: {target_url}
+
+Write the report in Markdown format with:
+# Executive Market Intelligence Brief: {competitor_name}
+## Executive Summary
+## Verified Strategic Anomalies & Metrics
+## Audit Trail & Citations
+
+Be direct, quantitative, and professional. State that this brief was generated autonomously by OpenAI Intelligence."""
+
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": self.model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.2
+        }
+
+        try:
+            res = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload, timeout=25)
+            if res.status_code == 200:
+                data = res.json()
+                usage = data.get("usage", {})
+                tokens_used = usage.get("total_tokens", 450)
+                cache_manager.record_llm_call(tokens=tokens_used)
+                return data["choices"][0]["message"]["content"]
+            else:
+                logger.error(f"OpenAI generate_report returned HTTP {res.status_code}: {res.text}")
+        except Exception as err:
+            logger.error(f"OpenAI generate_report failed: {err}")
+
         return MockLLMClient().generate_report(verified_claims, competitor_name, target_url)
 
     def refute_claims(self, claims: List[Dict[str, Any]], raw_text: str) -> List[Dict[str, Any]]:
@@ -242,7 +289,7 @@ Extract structured facts for competitor '{competitor_name}' as valid JSON matchi
 </UNTRUSTED_SCRAPED_DATA>"""
         try:
             content = self._call_groq([{"role": "user", "content": prompt}], json_mode=True)
-            parsed_json = json.loads(content)
+            parsed_json = json.loads(_clean_json_content(content))
             return ExtractedCompetitorData(**parsed_json)
         except Exception as err:
             logger.error(f"Groq extract_structured failed: {err}")
@@ -273,10 +320,110 @@ Be direct, quantitative, and professional. State that this brief was generated a
         # Enforce strict anti-hallucination quote check against raw text
         return MockLLMClient().refute_claims(claims, raw_text)
 
+class GeminiClient(LLMClient):
+    """Real Google Gemini provider via OpenAI-compatible REST endpoint."""
+    provider_name: str = "gemini"
+
+    def __init__(self, api_key: str, model: str = "gemini-1.5-flash"):
+        self.api_key = api_key
+        self.model = model
+        self.endpoint = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+
+    def _call_gemini(self, messages: List[Dict[str, str]], json_mode: bool = False) -> str:
+        headers = {
+            "Authorization": f"Bearer {self.api_key}",
+            "Content-Type": "application/json"
+        }
+        payload = {
+            "model": self.model,
+            "messages": messages,
+            "temperature": 0.1
+        }
+        if json_mode:
+            payload["response_format"] = {"type": "json_object"}
+
+        res = requests.post(self.endpoint, headers=headers, json=payload, timeout=25)
+        if res.status_code != 200:
+            raise RuntimeError(f"Gemini API returned HTTP {res.status_code}: {res.text}")
+
+        data = res.json()
+        usage = data.get("usage", {})
+        tokens_used = usage.get("total_tokens", 350)
+        cache_manager.record_llm_call(tokens=tokens_used)
+        return data["choices"][0]["message"]["content"]
+
+    def extract_structured(self, raw_text: str, competitor_name: str) -> ExtractedCompetitorData:
+        prompt = f"""SYSTEM INSTRUCTION: You are an autonomous market intelligence extractor.
+Extract structured facts for competitor '{competitor_name}' as valid JSON:
+{{
+  "competitor_name": "{competitor_name}",
+  "facts": [
+    {{
+      "entity": "{competitor_name}",
+      "fact_type": "plan | price | sla | feature",
+      "plan_name": "Name of tier/plan",
+      "value": "Extracted numerical price, feature limit, or SLA guarantee",
+      "quote": "Exact supporting verbatim text quote from primary page"
+    }}
+  ]
+}}
+
+<UNTRUSTED_SCRAPED_DATA>
+{raw_text[:6000]}
+</UNTRUSTED_SCRAPED_DATA>"""
+        try:
+            content = self._call_gemini([{"role": "user", "content": prompt}], json_mode=True)
+            parsed_json = json.loads(_clean_json_content(content))
+            return ExtractedCompetitorData(**parsed_json)
+        except Exception as err:
+            logger.error(f"Gemini extract_structured failed: {err}")
+            return MockLLMClient().extract_structured(raw_text, competitor_name)
+
+    def generate_report(self, verified_claims: List[Dict[str, Any]], competitor_name: str, target_url: str) -> str:
+        claims_summary = json.dumps(verified_claims, indent=2)
+        prompt = f"""You are the Executive Intelligence Writer for InsightOps AI.
+Synthesize an executive-ready market intelligence brief for **{competitor_name}** based on these verified claims:
+{claims_summary}
+
+Target URL: {target_url}
+
+Write the report in Markdown format with:
+# Executive Market Intelligence Brief: {competitor_name}
+## Executive Summary
+## Verified Strategic Anomalies & Metrics
+## Audit Trail & Citations
+
+Be direct, quantitative, and professional. State that this brief was generated autonomously by Google Gemini Intelligence."""
+        try:
+            return self._call_gemini([{"role": "user", "content": prompt}], json_mode=False)
+        except Exception as err:
+            logger.error(f"Gemini generate_report failed: {err}")
+            return MockLLMClient().generate_report(verified_claims, competitor_name, target_url)
+
+    def refute_claims(self, claims: List[Dict[str, Any]], raw_text: str) -> List[Dict[str, Any]]:
+        return MockLLMClient().refute_claims(claims, raw_text)
+
 def get_llm_client() -> LLMClient:
-    provider = settings.LLM_PROVIDER.lower()
+    provider = (settings.LLM_PROVIDER or "").lower().strip()
+    
+    # 1. Match configured provider if its key exists
     if provider == "groq" and settings.GROQ_API_KEY:
         return GroqClient(api_key=settings.GROQ_API_KEY, model=settings.GROQ_MODEL)
     if provider == "openai" and settings.OPENAI_API_KEY:
         return OpenAIClient(api_key=settings.OPENAI_API_KEY, model=settings.DEFAULT_LLM_MODEL)
+    if provider == "gemini" and settings.GEMINI_API_KEY:
+        return GeminiClient(api_key=settings.GEMINI_API_KEY)
+
+    # 2. Resilient Auto-detection: if configured provider key is missing, check alternative real keys
+    if settings.GROQ_API_KEY:
+        logger.info("Using Groq provider from detected GROQ_API_KEY.")
+        return GroqClient(api_key=settings.GROQ_API_KEY, model=settings.GROQ_MODEL)
+    if settings.OPENAI_API_KEY:
+        logger.info("Using OpenAI provider from detected OPENAI_API_KEY.")
+        return OpenAIClient(api_key=settings.OPENAI_API_KEY, model=settings.DEFAULT_LLM_MODEL)
+    if settings.GEMINI_API_KEY:
+        logger.info("Using Gemini provider from detected GEMINI_API_KEY.")
+        return GeminiClient(api_key=settings.GEMINI_API_KEY)
+
+    logger.warning("No live LLM API keys detected (GROQ_API_KEY, OPENAI_API_KEY, or GEMINI_API_KEY). Falling back to MockLLMClient.")
     return MockLLMClient()

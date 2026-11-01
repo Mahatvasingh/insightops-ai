@@ -141,7 +141,7 @@ class WebScraperEngine:
         from app.core.url_validator import validate_target_url
 
         current_url = url
-        max_hops = 3
+        max_hops = 6
         hop = 0
 
         while hop <= max_hops:

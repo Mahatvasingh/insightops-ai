@@ -18,7 +18,7 @@ class Settings(BaseSettings):
 
     # Demo & System Modes
     DEMO_MODE: bool = True
-    SCRAPER_MODE: str = "demo"  # demo | live
+    SCRAPER_MODE: str = "live"  # demo | live
     ADMIN_INVITE_CODE: str = "INSIGHTOPS-2026"
 
     # Database & Checkpointer
@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     SQLITE_CHECKPOINT_DB: str = "./checkpointer.db"
 
     # LLM Settings
-    LLM_PROVIDER: str = "mock"  # mock | groq | openai | gemini
+    LLM_PROVIDER: str = "groq"  # mock | groq | openai | gemini
     GROQ_API_KEY: Optional[str] = None
     GROQ_MODEL: str = "llama-3.3-70b-versatile"
     OPENAI_API_KEY: Optional[str] = None
